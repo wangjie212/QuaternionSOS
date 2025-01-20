@@ -10,10 +10,10 @@ g2 = quat(2,0,0,0)-quat(1,0,0,0)*q[1]-quat(1,0,0,0)*q[2]-quat(1,0,0,0)*q[3]-quat
 g3 = quat(0,1,1,1)*q[1]-quat(0,1,1,1)*q[3]+quat(0,1,1,1)*q[2]-quat(0,1,1,1)*q[4]
 qpop = [f,g1,g2,g3]
 order = 2 # set the relaxation order
-opt,cons,I,J= qs_tssos_first(qpop, q, n, order, numeq=2, TS=false)
+opt,cons,I,J= qs_tssos_first(qpop, q, n, order, numeq=2, TS=false, QUIET=true)
 sqrt(opt)
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, order, numeq=2)
+opt2 = tssos_first(pop, x, order, numeq=2, TS=false, QUIET=true)
 sqrt(opt2[1])
 
 # Example1 delete one equation
@@ -130,15 +130,15 @@ opt2 = tssos_first(pop, x, 1, numeq=1,solution=true,QUIET=true)
 
 
 #n=2
-rng = Xoshiro(88)
-qcoef=rand(rng,QuaternionF64,4)
-fcoef=rand(rng,Float64,8)
+# rng = Xoshiro(88)
+qcoef=rand(QuaternionF64,4)
+fcoef=rand(Float64,2)
 n = 2
 @polyvar q[1:2n]
 # General form//wrong
-f = qcoef[1]*q[1]+conj(qcoef[1])*q[3]+qcoef[2]*q[2]+conj(qcoef[2])*q[4]+qcoef[3]*q[1]*q[2]+conj(qcoef[3])*q[3]*q[4]
-+qcoef[4]*q[1]*q[4]+conj(qcoef[4])*q[3]*q[2]+quat(fcoef[1],0,0,0)*q[1]*q[3]+quat(fcoef[2],0,0,0)*q[2]*q[4]
-g = quat(1,0,0,0)-quat(1,0,0,0)*q[1]*q[3]-quat(1,0,0,0)*q[2]*q[4]
+f = qcoef[1]*q[1]+conj(qcoef[1])*q[3]+qcoef[2]*q[2]+conj(qcoef[2])*q[4] + qcoef[3]*q[1]*q[2]+conj(qcoef[3])*q[3]*q[4] +
+qcoef[4]*q[1]*q[4]+conj(qcoef[4])*q[2]*q[3] + quat(fcoef[1],0,0,0)*q[1]*q[3]+quat(fcoef[2],0,0,0)*q[2]*q[4]
+# g = quat(1,0,0,0)-quat(1,0,0,0)*q[1]*q[3] -quat(1,0,0,0)*q[2]*q[4]
 g1 = quat(1,0,0,0)-quat(1,0,0,0)*q[1]*q[3]
 g2 = quat(1,0,0,0)-quat(1,0,0,0)*q[2]*q[4]
 # qpop = [f,g]
@@ -146,11 +146,27 @@ g2 = quat(1,0,0,0)-quat(1,0,0,0)*q[2]*q[4]
 # opt,cons,I,J,basis,hbasis= qs_tssos_first(qpop, q, n, order, numeq=0, TS=false)
 # #qualify
 qpop =[f,g1,g2]
-order = 7
-opt,cons,I,J,basis,hbasis= qs_tssos_first(qpop, q, n, order, numeq=0, TS=false, QUIET=true)
+order = 3
+opt,cons,I,J,basis,hbasis = qs_tssos_first(qpop, q, n, order, numeq=0, TS=false, QUIET=true)
 #qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2, TS=false, numeq=0,solution=true, QUIET=true)
+opt2 = tssos_first(pop, x, 1, TS=false, numeq=0, solution=true, QUIET=true)
+
+
+
+A = zeros(24,24)
+for i = 1:24, j = 1:24
+    if abs(g1[i,j]) > 1e-6
+        A[i,j] = round(g1[i,j], digits=4)
+    end
+end
+println(A[1:6,1:6]+A[7:12,7:12]+A[13:18,13:18]+A[19:24,19:24])
+B = zeros(12,12)
+for i = 1:12, j = 1:12
+    if abs(g2[i,j]) > 1e-6
+        B[i,j] = round(g2[i,j], digits=4)
+    end
+end
 
 #n=2
 rng = Xoshiro(21)
@@ -166,7 +182,7 @@ f = quat(fcoef[1],fcoef[2],0,0)*q[1]+quat(fcoef[1],-fcoef[2],0,0)*q[3]
 g = quat(1,0,0,0)-quat(1,0,0,0)*q[1]*q[3]-quat(1,0,0,0)*q[2]*q[4]
 qpop = [f,g]
 order = 7
-opt,cons,I,J,basis,hbasis= qs_tssos_first(qpop, q, n, order, numeq=0, TS=false, QUIET=true)
+opt,cons,I,J,basis,hbasis,g1,g2= qs_tssos_first(qpop, q, n, order, numeq=0, TS=false, QUIET=true)
 #qualify
 pop,x = quaternion_to_real(qpop,q)
 opt2 = tssos_first(pop, x, 1, numeq=0,solution=true, QUIET=true)

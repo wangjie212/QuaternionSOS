@@ -10,11 +10,11 @@ function qs_tssos_first(pop::Vector{Polynomial{true, T}}, z, n, d; numeq=0, RemS
     dualize=false, balanced=false, MomentOne=false, Gram=false, Mommat=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
     writetofile=false, normality=0, NormalSparse=false) where {T<:Number}
     supp,coe = Qpolys_info(pop, z, n)
-    opt,cons,I,J,basis,hbasis,icons,jcons= qs_tssos_first(supp, coe, n, d, numeq=numeq, RemSig=RemSig, nb=nb, CS=CS, cliques=cliques, minimize=minimize,
+    opt,cons,I,J,basis,hbasis = qs_tssos_first(supp, coe, n, d, numeq=numeq, RemSig=RemSig, nb=nb, CS=CS, cliques=cliques, minimize=minimize,
     TS=TS, merge=merge, md=md, solver=solver, reducebasis=reducebasis, QUIET=QUIET, solve=solve, tune=tune, 
     solution=solution, ipart=ipart, dualize=dualize, balanced=balanced, MomentOne=MomentOne, Gram=Gram, Mommat=Mommat, 
     cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse, cpop=pop, z=z)
-    return opt,cons,I,J,basis,hbasis,icons,jcons
+    return opt,cons,I,J,basis,hbasis
 end
 
 function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d; numeq=0, RemSig=false, nb=0, CS="MF", cliques=[], 
@@ -41,14 +41,14 @@ function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d;
     end
     basis = Vector{Vector{Vector{UInt16}}}(undef, m-numeq+1)
     hbasis = Vector{Vector{Vector{Vector{UInt16}}}}(undef, numeq)
-    basis[1] = get_basis(cliques[1], rlorder)
+    basis[1] = get_ncbasis(n, rlorder, ind=cliques[1])
     for s = 1:length(I[1])
-            basis[s+1] = get_basis(cliques[1], rlorder-dc[I[1][s]])
+        basis[s+1] = get_ncbasis(n, rlorder-dc[I[1][s]], ind=cliques[1])
     end
     for s = 1:length(J[1])
-            temp = get_basis(cliques[1], rlorder-dc[J[1][s]])
-            hbasis[s] = vec([[item1, item2] for item1 in temp, item2 in temp])
-            sort!(hbasis[s])
+        temp = get_ncbasis(n, rlorder-dc[J[1][s]], ind=cliques[1])
+        hbasis[s] = vec([[item1, item2] for item1 in temp, item2 in temp])
+        sort!(hbasis[s])
     end  
     tsupp = copy(supp[1])
     for i = 2:m+1, j = 1:length(supp[i])
@@ -58,10 +58,10 @@ function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d;
     end
     sort!(tsupp)
     unique!(tsupp)
-    opt,ksupp,SDP_status,cons,icons,jcons= qsolvesdp(n, m, rlorder, supp, coe, basis, hbasis,I, J, ncc,
+    opt,ksupp,SDP_status,cons= qsolvesdp(n, m, rlorder, supp, coe, basis, hbasis,I, J, ncc,
     numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, tune=tune, solution=solution, ipart=ipart, MomentOne=MomentOne, balanced=balanced,
     Gram=Gram, Mommat=Mommat, nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse)
-    return opt,cons,I,J,basis,hbasis,icons,jcons
+    return opt,cons,I,J,basis,hbasis
 end
 
 function Qpolys_info(pop, z, n)
@@ -73,7 +73,7 @@ function Qpolys_info(pop, z, n)
         lm = length(mon)
         supp[k] = [[[], []] for i=1:lm]
         for i = 1:lm
-            ind = mon[i].z.> 0
+            ind = mon[i].z .> 0
             vars = mon[i].vars[ind]
             exp = mon[i].z[ind]
             for j in eachindex(vars)
@@ -93,7 +93,7 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
     numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", tune=false, solve=true, dualize=false, solution=false, Gram=false, MomentOne=false, ipart=true, Mommat=false, 
     cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false,balanced=false, normality=0, NormalSparse=false)
     tsupp = Vector{Vector{UInt16}}[]
-    println(basis[1])
+    # println(basis[1])
     for k = 1:length(basis[1]), r = k:length(basis[1])
         @inbounds bi = [basis[1][k], basis[1][r]]
         if bi[1] <= bi[2]
@@ -110,7 +110,7 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
     objv = moment = GramMat = SDP_status= nothing
     if solve == true
         ltsupp = length(tsupp)
-        println(ltsupp)
+        # println(ltsupp)
         if QUIET == false
             println("Assembling the SDP...")
         end
@@ -159,15 +159,15 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                 Locb = bfind(tsupp, ltsupp, bi)
                 @inbounds add_to_expression!(rcons[Locb], pos[1][1])
             else
-                pos[1][1] = @variable(model, [1:4bs, 1:4bs], PSD,base_name="Q")
-                # pos[1][1] = @variable(model, [1:bs, 1:bs], PSD,base_name="Q")
+                pos[1][1] = @variable(model, [1:4bs, 1:4bs], PSD, base_name="Q")
+                # pos[1][1] = @variable(model, [1:bs, 1:bs], PSD, base_name="Q")
                 for t = 1:bs, r = t:bs
                     @inbounds bi = [basis[1][t], basis[1][r]]
                     if bi[1] <= bi[2]
                         Locb = bfind(tsupp, ltsupp, bi)
                         if bi[1] != bi[2]
-                            @inbounds add_to_expression!(jcons[Locb], pos[1][1][t+2*bs,r]-pos[1][1][t,r+2*bs]-pos[1][1][t+3*bs,r+bs]+pos[1][1][t+bs,r+3*bs])
                             @inbounds add_to_expression!(icons[Locb], pos[1][1][t+bs,r]-pos[1][1][t,r+bs]+pos[1][1][t+3*bs,r+2*bs]-pos[1][1][t+2*bs,r+3*bs]) 
+                            @inbounds add_to_expression!(jcons[Locb], pos[1][1][t+2*bs,r]-pos[1][1][t,r+2*bs]-pos[1][1][t+3*bs,r+bs]+pos[1][1][t+bs,r+3*bs])
                             @inbounds add_to_expression!(kcons[Locb], pos[1][1][t+3*bs,r]-pos[1][1][t,r+3*bs]+pos[1][1][t+2*bs,r+bs]-pos[1][1][t+bs,r+2*bs])
                         end
                     else
@@ -199,8 +199,8 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                         end
                     end 
                 else
-                        pos[j+1][1] = @variable(model, [1:4bs, 1:4bs], PSD,base_name="X")
-                        # pos[j+1][1] = @variable(model, [1:bs, 1:bs], PSD,base_name="X")
+                        pos[j+1][1] = @variable(model, [1:4bs, 1:4bs], PSD, base_name="X")
+                        # pos[j+1][1] = @variable(model, [1:bs, 1:bs], PSD, base_name="X")
                     for t = 1:bs, r = 1:bs
                         for s = 1:length(supp[w+1])
                             @inbounds bi = [sadd(basis[j+1][t], supp[w+1][s][1]), sadd(basis[j+1][r], supp[w+1][s][2])]
@@ -329,7 +329,7 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
         end
         println("optimum = $objv")
     end
-    return objv,ksupp,SDP_status,cons,icons,jcons
+    return objv,ksupp,SDP_status,cons
 end
 
 function quaternion_to_real(qpop, q)
