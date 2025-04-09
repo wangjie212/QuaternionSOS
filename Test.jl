@@ -41,7 +41,7 @@ opt2 = tssos_first(pop, x, order,numeq=n ,TS=false,solution=true)
 #Test2
 # n=20,40,60 seed=11,12,13;
 rng = Xoshiro(11)
-n = 20
+n = 40
 @ncpolyvar q[1:2n]
 f=randomsymfunc(q,n,1,rng;conjugates=true,coelimit=false)
 g=1
@@ -59,20 +59,20 @@ qpop=[f,g]
 opt= qs_tssos_first(qpop, q, n, order,numeq=0,TS=false)
 ####qualify
 pop,x= quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 1, numeq=0,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=0,TS=false,solution=true)
 ###sphere
 qpop = [f,g]
 opt= qs_tssos_first(qpop, q, n, order, numeq=1, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2, numeq=1,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=1,TS=false,solution=true)
 
 ###unit norm
 qpop = append!([f],gn)
 opt= qs_tssos_first(qpop, q, n, order, numeq=n, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2,numeq=n ,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order,numeq=n ,TS=false,solution=true)
 #Test3
 # n=1,2,3,4,5,6 seed=11,12,13;
 rng = Xoshiro(11)
@@ -94,20 +94,20 @@ qpop=[f,g]
 opt= qs_tssos_first(qpop, q, n, order,numeq=0,TS=false)
 ####qualify
 pop,x= quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 1, numeq=0,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=0,TS=false,solution=true)
 ###sphere
 qpop = [f,g]
 opt= qs_tssos_first(qpop, q, n, order, numeq=1, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2, numeq=1,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=1,TS=false,solution=true)
 
 ###unit norm
 qpop = append!([f],gn)
 opt= qs_tssos_first(qpop, q, n, order, numeq=n, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2,numeq=n ,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order,numeq=n ,TS=false,solution=true)
 #Test4
 # n=1,2,3,4,5,6 seed=30,60,90;
 rng = Xoshiro(30)
@@ -129,20 +129,20 @@ qpop=[f,g]
 opt= qs_tssos_first(qpop, q, n, order,numeq=0,TS=false)
 ####qualify
 pop,x= quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 1, numeq=0,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=0,TS=false,solution=true)
 ###sphere
 qpop = [f,g]
 opt= qs_tssos_first(qpop, q, n, order, numeq=1, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2, numeq=1,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order, numeq=1,TS=false,solution=true)
 
 ###unit norm
 qpop = append!([f],gn)
 opt= qs_tssos_first(qpop, q, n, order, numeq=n, TS=false)
 ####qualify
 pop,x = quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, 2,numeq=n ,TS=false,solution=true)
+opt2 = tssos_first(pop, x, order,numeq=n ,TS=false,solution=true)
 
 
 
