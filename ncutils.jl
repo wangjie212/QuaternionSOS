@@ -214,7 +214,6 @@ function get_ncbasis(n, d; ind=Vector{UInt16}(1:n), binary=false)
     end
     return basis
 end
-
 function _get_ncbasis_deg(n, d; ind=Vector{UInt16}(1:n), binary=false)
     if d > 0
         basis = Vector{UInt16}[]
@@ -222,9 +221,9 @@ function _get_ncbasis_deg(n, d; ind=Vector{UInt16}(1:n), binary=false)
             temp = _get_ncbasis_deg(n, d-1, ind=ind, binary=binary)
             if binary == false || d == 1
                 push!.(temp, ind[i])
-                println(temp)
+                # println(temp)
                 append!(basis, temp)
-                println(basis)
+                # println(basis)
             else
                 for item in temp
                     # printlln(item[end])
@@ -264,53 +263,118 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     end
     return transpose(monc)*A_symmetric*mon
 end
-function _get_qncbasis_deg(n, d; ind=Vector{UInt16}(1:2n), binary=false)
+# function _get_qncbasis_deg(n, d; ind=Vector{UInt16}(1:2n), binary=false)
+#     if d > 0
+#         # basis = Vector{Vector{Vector{UInt16}}}[[[],[],[]]]
+#         basis=[[UInt16[],UInt16[],UInt16[]]]
+#         for i = 1:2n
+#             temp = _get_qncbasis_deg(n, d-1, ind=ind, binary=binary)
+#             # println(temp)
+#             # println(temp,length(temp))
+#             if binary == false || d == 1
+#                 lm=length(temp)
+#                 for j =1:lm
+#                     if length(temp[j][3])!=0
+#                         if temp[j][3][end]!= ind[i]-ind[n] && temp[j][3][end]!= ind[i]+ind[n]
+#                         push!(temp[j][3],ind[i])
+#                         else
+#                         ab=(temp[j][3][end]<ind[i]) ? temp[j][3][end] : ind[i]
+#                         push!(temp[j][1],ab)
+#                         push!(temp[j][2],ab+ind[n])
+#                         deleteat!(temp[j][3],length(temp[j][3]))
+#                         end
+#                     else
+#                         # println(ind[i])
+#                         # println(typeof(temp[j][3]))
+#                         push!(temp[j][3],ind[i])
+#                         # println(temp[j][3])
+#                     end
+#                 end
+#             end
+#                 # println(temp)
+#                 append!(basis, temp)
+#             # else
+#             #     for item in temp
+#             #         # printlln(item[end])
+#             #         if item[end] != ind[i]
+#             #             push!(basis, [item;ind[i]])
+#             #             # println(basis)
+#             #         end
+#             #     end
+#             # end
+#         end
+#         de=[]
+#         # for i=1:length(basis)
+#         #     temp3=basis[i][3][basis[i][3].<=ind[n]]
+#         #     if length(basis[i][1])+length(temp3)<d && length(basis[i][2])+length(basis[i][3])-length(temp3)<d
+#         #         push!(de,i)
+#         #     end
+#         # end
+#         for i=1:length(basis)
+#             if length(basis[i][1])+length(basis[i][2])+length(basis[i][3])<d
+#                 push!(de,i)
+#             end
+#         end
+#         deleteat!(basis,de)
+#         unique!(basis)
+#         return basis
+#     else
+#         return [[UInt16[],UInt16[],UInt16[]]]
+#     end
+# end
+function get_qncbasis(n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false)
+    basis=[[UInt16[],UInt16[],UInt16[]]]
+    for i = 1:d
+        if conjubasis!=false
+        append!(basis, _get_qncbasis_deg2(n, i, ind=ind, binary=binary))
+        else
+        append!(basis, _get_qncbasis_deg(n, i, ind=ind, binary=binary))
+        end
+    end
+    return basis
+end
+function bget_qncbasis(n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false)
+    basis=[[UInt16[],UInt16[],UInt16[]]]
+    for i = 1:d
+        if conjubasis!=false
+        append!(basis, _get_qncbasis_deg2(n, i, ind=ind, binary=binary))
+        else
+        append!(basis, _get_qncbasis_deg(n, i, ind=ind, binary=binary))
+        end
+    end
+    basistemp=deepcopy(basis)
+    if !conjubasis
+        for i=1:n
+            for j=1:length(basistemp)
+                a=deepcopy(basistemp[j])
+                ltemp=qtermadd([UInt16[],UInt16[],[UInt16(i)]],a,n)
+                push!(basis,ltemp)
+            end
+        end
+    end
+    unique!(basis)
+    return basis
+end
+function _get_qncbasis_deg(n, d; ind=Vector{UInt16}(1:n), binary=false)
     if d > 0
-        # basis = Vector{Vector{Vector{UInt16}}}[[[],[],[]]]
         basis=[[UInt16[],UInt16[],UInt16[]]]
-        for i = 1:2n
+        for i = 1:n
             temp = _get_qncbasis_deg(n, d-1, ind=ind, binary=binary)
-            # println(temp)
-            # println(temp,length(temp))
             if binary == false || d == 1
                 lm=length(temp)
                 for j =1:lm
-                    if length(temp[j][3])!=0
-                        if temp[j][3][end]!= ind[i]-ind[n] && temp[j][3][end]!= ind[i]+ind[n]
-                        push!(temp[j][3],ind[i])
-                        else
-                        ab=(temp[j][3][end]<ind[i]) ? temp[j][3][end] : ind[i]
-                        push!(temp[j][1],ab)
-                        push!(temp[j][2],ab+ind[n])
-                        deleteat!(temp[j][3],length(temp[j][3]))
-                        end
-                    else
-                        # println(ind[i])
-                        # println(typeof(temp[j][3]))
-                        push!(temp[j][3],ind[i])
-                        # println(temp[j][3])
+                    push!(temp[j][3],ind[i])
+                    append!(basis,temp)
+                end
+            else
+                for item in temp
+                    if item[3][end] != ind[i]
+                        push!(basis, [item[1],item[2],[item[3];ind[i]]])
                     end
                 end
             end
-                # println(temp)
-                append!(basis, temp)
-            # else
-            #     for item in temp
-            #         # printlln(item[end])
-            #         if item[end] != ind[i]
-            #             push!(basis, [item;ind[i]])
-            #             # println(basis)
-            #         end
-            #     end
-            # end
         end
         de=[]
-        # for i=1:length(basis)
-        #     temp3=basis[i][3][basis[i][3].<=ind[n]]
-        #     if length(basis[i][1])+length(temp3)<d && length(basis[i][2])+length(basis[i][3])-length(temp3)<d
-        #         push!(de,i)
-        #     end
-        # end
         for i=1:length(basis)
             if length(basis[i][1])+length(basis[i][2])+length(basis[i][3])<d
                 push!(de,i)
@@ -322,13 +386,6 @@ function _get_qncbasis_deg(n, d; ind=Vector{UInt16}(1:2n), binary=false)
     else
         return [[UInt16[],UInt16[],UInt16[]]]
     end
-end
-function get_qncbasis(n, d; ind=Vector{UInt16}(1:2n), binary=false)
-    basis=[[UInt16[],UInt16[],UInt16[]]]
-    for i = 1:d
-        append!(basis, _get_qncbasis_deg2(n, i, ind=ind, binary=binary))
-    end
-    return basis
 end
 # function _get_qncbasis_deg2(n, d; ind=Vector{UInt16}(1:2n), binary=false)
 #     if d > 0
@@ -495,6 +552,25 @@ function _get_qncbasis_deg2(n, d; ind=Vector{UInt16}(1:2n), binary=false)
     else
         return [[UInt16[],UInt16[],UInt16[]]]
     end
+end
+function qreduce_unitnorm(a; nb=0)
+    a = [UInt16[],UInt16[],copy(a[3])]
+    return a
+end
+function qresort(supp, coe; nb=0)
+    if nb > 0
+        supp = qreduce_unitnorm.(supp, nb=nb)
+    end
+    nsupp = deepcopy(supp)
+    sort!(nsupp)
+    unique!(nsupp)
+    l = length(nsupp)
+    ncoe = zeros(typeof(coe[1]), l)
+    for i in eachindex(supp)
+        locb = bfind(nsupp, l, supp[i])
+        ncoe[locb] += coe[i]
+    end
+    return nsupp,ncoe
 end
 function reduce_cons!(word::Vector{UInt16}; constraint="unipotent")
     i = 1
