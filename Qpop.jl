@@ -6,6 +6,7 @@ using JuMP
 using LinearAlgebra
 include("function.jl")
 include("ncutils.jl")
+
 function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n, d; numeq=0, RemSig=false, nb=0, CS="MF", cliques=[], minimize=false, 
     TS=false, merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, tune=false, solution=false, ipart=true, 
     dualize=false, balanced=false, MomentOne=false, Gram=false, Mommat=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
@@ -177,19 +178,6 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                 "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => mosek_setting.tol_relgap, "MSK_DPAR_OPTIMIZER_MAX_TIME" => mosek_setting.time_limit, "MSK_IPAR_NUM_THREADS" => mosek_setting.num_threads))
             else
                 model = Model(dual_optimizer(Mosek.Optimizer))
-            end
-            if tune == true
-                set_optimizer_attributes(model,
-                "MSK_DPAR_INTPNT_CO_TOL_MU_RED" => 1e-7,
-                "MSK_DPAR_INTPNT_CO_TOL_INFEAS" => 1e-7,
-                "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => 1e-7,
-                "MSK_DPAR_INTPNT_CO_TOL_DFEAS" => 1e-7,
-                "MSK_DPAR_INTPNT_CO_TOL_PFEAS" => 1e-7,
-                "MSK_DPAR_INTPNT_CO_TOL_NEAR_REL" => 1e6,
-                "MSK_IPAR_BI_IGNORE_NUM_ERROR" => 1,
-                "MSK_DPAR_BASIS_TOL_X" => 1e-3,
-                "MSK_DPAR_BASIS_TOL_S" => 1e-3,
-                "MSK_DPAR_BASIS_REL_TOL_S" => 1e-5)
             end
         elseif solver == "COSMO"
             model = Model(optimizer_with_attributes(COSMO.Optimizer, "eps_abs" => cosmo_setting.eps_abs, "eps_rel" => cosmo_setting.eps_rel, "max_iter" => cosmo_setting.max_iter, "time_limit" => cosmo_setting.time_limit))

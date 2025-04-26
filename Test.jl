@@ -76,7 +76,7 @@ opt2 = tssos_first(pop, x, order,numeq=n ,TS=false,solution=true)
 #Test3
 # n=1,2,3,4,5,6 seed=11,12,13;
 rng = Xoshiro(11)
-n = 1
+n = 5
 @ncpolyvar q[1:2n]
 f=randomsymfunc(q,n,2,rng;conjugates=true,coelimit=true)
 g=1
@@ -94,7 +94,8 @@ qpop=[f,g]
 opt= qs_tssos_first(qpop, q, n, order,numeq=0,TS=false)
 ####qualify
 pop,x= quaternion_to_real(qpop,q)
-opt2 = tssos_first(pop, x, order, numeq=0,TS=false,solution=true)
+opt2,sol,data = tssos_first(pop, x, order, numeq=0,TS=false,solution=true)
+println(data.blocksize[1][1])
 ###sphere
 qpop = [f,g]
 opt= qs_tssos_first(qpop, q, n, order, numeq=1, TS=false)
