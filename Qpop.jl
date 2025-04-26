@@ -9,21 +9,24 @@ include("ncutils.jl")
 function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n, d; numeq=0, RemSig=false, nb=0, CS="MF", cliques=[], minimize=false, 
     TS=false, merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, tune=false, solution=false, ipart=true, 
     dualize=false, balanced=false, MomentOne=false, Gram=false, Mommat=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
-    writetofile=false, normality=0, NormalSparse=false) where {T<:Number}
+    writetofile=false, normality=0, NormalSparse=false,conjubasis=true) where {T<:Number}
     supp,coe = Qpolys_info(pop, z, n)
     opt= qs_tssos_first(supp, coe, n, d, numeq=numeq, RemSig=RemSig, nb=nb, CS=CS, cliques=cliques, minimize=minimize,
     TS=TS, merge=merge, md=md, solver=solver, reducebasis=reducebasis, QUIET=QUIET, solve=solve, tune=tune, 
     solution=solution, ipart=ipart, dualize=dualize, balanced=balanced, MomentOne=MomentOne, Gram=Gram, Mommat=Mommat, 
-    cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse, cpop=pop, z=z)
+    cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,cpop=pop, z=z)
     return opt
 end
 
 function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d; numeq=0, RemSig=false, nb=0, CS="MF", cliques=[], 
     minimize=false, TS=false, merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, tune=false, solution=false, 
     ipart=true, dualize=false, balanced=false, MomentOne=false, Gram=false, Mommat=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
-    writetofile=false, normality=0, NormalSparse=false, cpop=nothing, z=nothing)
+    writetofile=false, normality=0, NormalSparse=false,conjubasis=true,cpop=nothing, z=nothing)
     println("*********************************** TSSOS ***********************************")
     println("NCTSSOS is launching...")
+    if nb > 0
+        supp[1],coe[1] = qresort(supp[1],coe[1];nb=nb)
+    end
     m = length(supp) - 1
     dc = zeros(Int, m)
     for i = 1:m       
@@ -42,9 +45,15 @@ function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d;
     rlorder=d
     basis = Vector{Vector{Vector{Vector{UInt16}}}}(undef, m+1)
     # hbasis = Vector{Vector{Vector{Vector{UInt16}}}}(undef, numeq)
-    basis[1]=get_qncbasis(n, rlorder)
+    basis[1]=get_qncbasis(n, rlorder;conjubasis=conjubasis)
     for s = 1:m
-            basis[s+1] = get_qncbasis(n, rlorder-Int(ceil(dc[s]/2)))
+            basis[s+1] = get_qncbasis(n, rlorder-Int(ceil(dc[s]/2));conjubasis=conjubasis)
+    end
+    if nb > 0
+        for s=1:m+1
+        basis[s]= qreduce_unitnorm.(basis[s], nb=nb)
+        unique!(basis[s])
+        end
     end
     # for s = 1:length(Jc)
     #         # temp = get_basis(cliques[1], rlorder-dc[J[1][s]])
@@ -62,7 +71,7 @@ function qs_tssos_first(supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, n, d;
     # sort!(tsupp)
     # unique!(tsupp)
     opt,ksupp,SDP_status= qsolvesdp(n, m, rlorder, supp, coe, basis, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, tune=tune, solution=solution, ipart=ipart, MomentOne=MomentOne, balanced=balanced,
-    Gram=Gram, Mommat=Mommat, nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse)
+    Gram=Gram, Mommat=Mommat, nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
     return opt
 end
 
@@ -117,7 +126,7 @@ function Qpolys_info(pop, z, n)
 end
 function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, basis; 
     numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", tune=false, solve=true, dualize=false, solution=false, Gram=false, MomentOne=false, ipart=true, Mommat=false, 
-    cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false,balanced=false, normality=0, NormalSparse=false)
+    cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false,balanced=false, normality=0, NormalSparse=false,conjubasis=false)
     tsupp = Vector{Vector{UInt16}}[]
     # println(basis[1])
     # for k = 1:length(basis[1]), r = k:length(basis[1])
@@ -126,8 +135,12 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
         a=deepcopy(basis[1][k])
         b=deepcopy(basis[1][r])
         @inbounds bi = qtermadd(a,b,n)
+        if nb > 0
+            bi = qreduce_unitnorm(bi, nb=nb)
+        end
         push!(tsupp,bi)
     end
+    # println(tsupp)
     ksupp = deepcopy(tsupp)
     if normality > 0
         wbasis = [[UInt16[],UInt16[],UInt16[]]]
@@ -320,6 +333,9 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                 a=deepcopy(basis[1][1])
                 b=deepcopy(basis[1][1])
                 @inbounds bi = qtermadd(a, b,n)
+                if nb > 0
+                    bi = qreduce_unitnorm(bi;nb=nb)
+                end
                 # println(bi)
                 Locb = bfind(tsupp, ltsupp, bi)
                 @inbounds add_to_expression!(rcons[Locb], pos[1][1])
@@ -331,6 +347,9 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                     a=deepcopy(basis[1][t])
                     b=deepcopy(basis[1][r])
                     @inbounds bi = qtermadd(a,b,n)
+                    if nb > 0
+                        bi = qreduce_unitnorm(bi;nb=nb)
+                    end
                     # if bi==[UInt16[],UInt16[],UInt16[]]||!(bi in Temp) 
                     # println(bi)
                     #     push!(Temp,bi)
@@ -370,6 +389,9 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                     b=deepcopy(supp[k+1][s])
                     c=deepcopy(basis[k+1][1])
                     @inbounds bi = qtermadd3(a,b,c,n)
+                    if nb > 0
+                        bi = qreduce_unitnorm(bi;nb=nb)
+                    end
                     # @inbounds bi = qtermadd3(a,c,b,n)
                     # println(bi)
                     # println(tsupp)
@@ -389,14 +411,13 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
                         b=deepcopy(supp[k+1][s])
                         c=deepcopy(basis[k+1][r])
                         @inbounds bi = qtermadd3(a,b,c,n)
-                        # @inbounds bi = qtermadd3(a,c,b,n)
-                        # if bi==[UInt16[],UInt16[],UInt16[]]||!(bi in Temp) 
-                        #     println(bi)
-                        #     push!(Temp,bi)
-                        #     Locb = bfind(tsupp, ltsupp, bi)
-                        #     @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1][t,r])
-                        # end
+                        if nb > 0
+                            bi = qreduce_unitnorm(bi;nb=nb)
+                        end
                         Locb = bfind(tsupp, ltsupp, bi)
+                        # if Locb==nothing
+                        #     println(basis[k+1][t],supp[k+1][s],basis[k+1][r],bi)
+                        # end
                         @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1][t,r])
                     end
                 end
