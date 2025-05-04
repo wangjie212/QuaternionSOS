@@ -113,6 +113,29 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     return transpose(monc)*A_symmetric*mon
 end
 
+function qrandomsymfunc(q,n,d,rng;conjugates=false)
+    mon=Monomial{false}[1]
+    for j=1:d
+        if conjugates!=false
+            append!(mon,monomials(q, j))
+        else
+            append!(mon,monomials(q[1:n], j))
+        end
+    end
+    monc=Monomial{false}[]
+    for i=1:length(mon)
+        temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
+        push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+    end
+    t=length(mon)
+    println(t)
+        A = rand(rng,QuaternionF64,t,t) 
+        A_symmetric = (A + adjoint(A)) / 2
+    # to real
+    B = conj.(A_symmetric)
+    return transpose(monc)*A_symmetric*mon, transpose(mon)*B*monc
+end
+
 function bfind(A, l, a)
     if l == 0
         return 0

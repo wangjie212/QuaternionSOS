@@ -19,14 +19,14 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false,conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 1, numeq=n, Groebnerbasis=false, TS=false, solution=true, QUIET=true)
+@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=false, QUIET=true)
+pop,x = quaternion_to_real([f;gn], q)
+@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
 
 
 # Test 2
@@ -39,14 +39,14 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 1, numeq=n, Groebnerbasis=false, TS=false, solution=true, QUIET=true)
+@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
 
 # Test 3
 # seed = 11,12,13
@@ -58,14 +58,14 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS=false, conjubasis=true)
+@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS=false, ipart=false, conjubasis=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 2, QUIET=true, TS=false, solution=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, QUIET=true, conjubasis=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, ipart=false, QUIET=true, conjubasis=true)
 pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 2, numeq=n, Groebnerbasis=true, TS=false, QUIET=true)
+@time tssos_first(pop, x, 2, numeq=n, TS=false, QUIET=true)
 
 
 # Test 4
@@ -78,11 +78,30 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, TS=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 2, TS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, ipart=false, conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 2, numeq=n, Groebnerbasis=false, TS=false, solution=true, QUIET=true)
+@time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
+
+# Test 5
+## n = 20,30 seed = 1,2,3
+rng = Xoshiro(1)
+n = 20
+@ncpolyvar q[1:2n]
+f,fr = qrandomsymfunc(q, n, 1, rng, conjugates=false)
+g = 1 - sum(q[i]*q[i+n] for i = 1:n)
+gn = [1 - q[i]*q[i+n] for i = 1:n]
+
+## ball
+@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=true,conjubasis=false, QUIET=true)
+pop,x = quaternion_to_real([fr, g], q)
+@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
+
+## unit norm
+@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=true, conjubasis=false, QUIET=true)
+pop,x = quaternion_to_real([fr;gn], q)
+@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)

@@ -4,7 +4,7 @@ function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n, d; numeq=0, RemS
     writetofile=false, normality=0, NormalSparse=false, conjubasis=true) where {T<:Number}
     supp,coe = Qpolys_info(pop, z, n)
     println("*********************************** TSSOS ***********************************")
-    println("TSSOS is launching...")
+    println("QSSOS is launching...")
     if nb > 0
         supp[1],coe[1] = qresort(supp[1],coe[1];nb=nb)
     end
@@ -87,10 +87,7 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
     numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", solve=true, dualize=false, solution=false, ipart=true, 
     cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false)
     tsupp = Vector{Vector{UInt16}}[]
-    # println(basis[1])
-    # for k = 1:length(basis[1]), r = k:length(basis[1])
     for k = 1:length(basis[1]), r = 1:length(basis[1])
-        # @inbounds bi = [basis[1][k], basis[1][r]]
         a=deepcopy(basis[1][k])
         b=deepcopy(basis[1][r])
         @inbounds bi = qtermadd(a,b,n)
@@ -99,37 +96,24 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
         end
         push!(tsupp,bi)
     end
-    # println(tsupp)
     ksupp = deepcopy(tsupp)
     if normality > 0
         wbasis = [[UInt16[],UInt16[],UInt16[]]]
-        wbasis= get_qncbasis(n, normality)
-        temp =get_qncbasis(n, 1)
-        bs = length(wbasis)
-        for i = 2:n+1
-            if normality >= d
-                for j = 1:bs, k = 1:bs
-                    a=deepcopy(temp[i])
-                    b=deepcopy(temp[i])
-                    c=deepcopy(wbasis[j])
-                    d=deepcopy(wbasis[k])
-                    bi =qtermadd3(c,qtermadd(a,b,n),d,n)
-                    push!(tsupp, bi)
+        for t=1:n
+            wbasis= bget_qncbasis(n, normality,t)
+            if nb > 0
+                wbasis= qreduce_unitnorm.(wbasis, nb=nb)
+                unique!(wbasis)
+            end
+            ws = length(wbasis)
+            for k = 1:ws, r = 1:ws
+                a=deepcopy(wbasis[k])
+                b=deepcopy(wbasis[r])
+                @inbounds bi = qtermadd(a,b,n)
+                if nb > 0
+                    bi = qreduce_unitnorm(bi, nb=nb)
                 end
-                for j = 1:bs, k = 1:bs
-                    a=deepcopy(temp[i])
-                    b=deepcopy(wbasis[j])
-                    c=deepcopy(wbasis[k])
-                    bi = qtermadd3(b,a,c,n)
-                    push!(tsupp, bi)
-                end
-                for j = 1:bs, k = 1:bs
-                    a=deepcopy(temp[i+n])
-                    b=deepcopy(wbasis[j])
-                    c=deepcopy(wbasis[k])
-                    bi = qtermadd3(b,a,c,n)
-                    push!(tsupp, bi)
-                end
+                push!(tsupp,bi)
             end
         end
     end
@@ -139,7 +123,6 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
     objv = SDP_status= nothing
     if solve == true
         ltsupp = length(tsupp)
-        # println(ltsupp)
         if QUIET == false
             println("Assembling the SDP...")
         end
@@ -163,106 +146,31 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
         set_optimizer_attribute(model, MOI.Silent(), QUIET)
         time = @elapsed begin
         rcons = [AffExpr(0) for i=1:ltsupp]
-        # icons = [AffExpr(0) for i=1:ltsupp]
-        # jcons = [AffExpr(0) for i=1:ltsupp]
-        # kcons = [AffExpr(0) for i=1:ltsupp]
+        if ipart==true
+            icons = [AffExpr(0) for i=1:ltsupp]
+            jcons = [AffExpr(0) for i=1:ltsupp]
+            kcons = [AffExpr(0) for i=1:ltsupp]
+        end
+        hnom = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, n)
         if normality > 0
-            bs = length(wbasis)
-            for i = 2:n+1
+            for t=1:n
+                wbasis= bget_qncbasis(n, normality,t)
+                if nb > 0
+                    wbasis= qreduce_unitnorm.(wbasis, nb=nb)
+                    unique!(wbasis)
+                end
+                ws = length(wbasis)
                 if NormalSparse == false
-                        # if ipart == true
-                        #     hnom = @variable(model, [1:4bs, 1:4bs], PSD)
-                        # else
-                    hnom = @variable(model, [1:2bs, 1:2bs], PSD)
-                        # end
-                    for j = 1:bs, k = j:bs
+                    hnom[t] = @variable(model, [1:ws, 1:ws], PSD)
+                    for j = 1:ws, k = 1:ws
                         a=deepcopy(wbasis[j])
                         b=deepcopy(wbasis[k])
                         bi =qtermadd(a,b,n)
-                            # if bi[1] <= bi[2]
-                        Locb = bfind(tsupp, ltsupp, bi)
-                                # if bi[1] != bi[2] && ipart == true
-                                #     @inbounds add_to_expression!(icons[Locb], hnom[j,k+2bs]-hnom[k,j+2bs])
-                                # end
-                            # else
-                                # Locb = bfind(tsupp, ltsupp, bi[2:-1:1])
-                                # if ipart == true
-                                #     @inbounds add_to_expression!(icons[Locb], -1, hnom[j,k+2bs]-hnom[k,j+2bs])
-                                # end
-                            # end
-                            # if ipart == true
-                            #     @inbounds add_to_expression!(rcons[Locb], hnom[j,k]+hnom[j+2bs,k+2bs])
-                            # else
-                        if j==k
-                            @inbounds add_to_expression!(rcons[Locb], hnom[j,k])
-                        else
-                            @inbounds add_to_expression!(rcons[Locb], 2, hnom[j,k])
+                        if nb > 0
+                            bi = qreduce_unitnorm(bi, nb=nb)
                         end
-                            # end
-                        a=deepcopy(temp[i])
-                        b=deepcopy(temp[i])
-                        c=deepcopy(wbasis[j])
-                        d=deepcopy(wbasis[k])
-                        bi =qtermadd3(c,qtermadd(a,b,n),d,n)
-                            # a=deepcopy(temp[i])
-                            # b=deepcopy(wbasis[j])
-                            # c=deepcopy(wbasis[k])
-                            # bi = qtermadd3(a,b,c,n)
-                            # if bi[1] <= bi[2]
                         Locb = bfind(tsupp, ltsupp, bi)
-                        # @inbounds add_to_expression!(rcons[Locb], hnom[j+bs,k+bs])
-                        if j==k
-                            @inbounds add_to_expression!(rcons[Locb], hnom[j+bs,k+bs])
-                        else
-                            @inbounds add_to_expression!(rcons[Locb], 2, hnom[j+bs,k+bs])
-                        end
-                    end
-                    # for j = 1:bs, k = 1:bs
-                    #     a=deepcopy(temp[i+n])
-                    #     b=deepcopy(wbasis[j])
-                    #     c=deepcopy(wbasis[k])
-                    #     bi = qtermadd3(a,b,c,n)
-                    #         # if bi[1] <= bi[2]
-                    #     Locb = bfind(tsupp, ltsupp, bi)
-                    #             # if bi[1] != bi[2]
-                    #                 # if ipart == true
-                    #                 #     @inbounds add_to_expression!(icons[Locb], hnom[j,k+3bs]-hnom[k+bs,j+2bs])
-                    #                 #     @inbounds add_to_expression!(rcons[Locb], hnom[j,k+bs]+hnom[j+2bs,k+3bs])
-                    #                 # else
-                    #     @inbounds add_to_expression!(rcons[Locb], hnom[j,k+bs])
-                    #                 # end
-                    #             # else
-                    #                 # if ipart == true
-                    #                     # @inbounds add_to_expression!(rcons[Locb], 2, hnom[j,k+bs]+hnom[j+2bs,k+3bs])
-                    #                 # else
-                    #                     # @inbounds add_to_expression!(rcons[Locb], 2, hnom[j,k+bs])
-                    #                 # end
-                    #             # end
-                    #         # else
-                    #         #     Locb = bfind(tsupp, ltsupp, bi[2:-1:1])
-                    #         #     if ipart == true
-                    #         #         @inbounds add_to_expression!(icons[Locb], -1, hnom[j,k+3bs]-hnom[k+bs,j+2bs])
-                    #         #         @inbounds add_to_expression!(rcons[Locb], hnom[j,k+bs]+hnom[j+2bs,k+3bs])
-                    #         #     else
-                    #         #         @inbounds add_to_expression!(rcons[Locb], hnom[j,k+bs])
-                    #         #     end
-                    #         # end
-                    # end
-                    for j = 1:bs, k = 1:bs
-                        a=deepcopy(temp[i+n])
-                        b=deepcopy(wbasis[j])
-                        c=deepcopy(wbasis[k])
-                        bi = qtermadd3(b,a,c,n)
-                        Locb = bfind(tsupp, ltsupp, bi)
-                        @inbounds add_to_expression!(rcons[Locb], hnom[j,k+bs])
-                    end
-                    for j = 1:bs, k = 1:bs
-                        a=deepcopy(temp[i])
-                        b=deepcopy(wbasis[j])
-                        c=deepcopy(wbasis[k])
-                        bi = qtermadd3(b,a,c,n)
-                        Locb = bfind(tsupp, ltsupp, bi)
-                        @inbounds add_to_expression!(rcons[Locb], hnom[j+bs,k])
+                        @inbounds add_to_expression!(rcons[Locb], hnom[t][j,k])
                     end
                 end
             end
@@ -270,54 +178,41 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
         # pos = Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}(undef, m-numeq+1)
         pos = Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}(undef, m+1)
         pos[1] = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, 1)
-            @inbounds bs = length(basis[1])
-            if bs == 1
-                pos[1][1] = @variable(model, lower_bound=0,base_name="Q")
-                a=deepcopy(basis[1][1])
-                b=deepcopy(basis[1][1])
-                @inbounds bi = qtermadd(a, b,n)
+        @inbounds bs = length(basis[1])
+        if bs == 1
+            pos[1][1] = @variable(model, lower_bound=0,base_name="Q")
+            a=deepcopy(basis[1][1])
+            b=deepcopy(basis[1][1])
+            @inbounds bi = qtermadd(a, b,n)
+            if nb > 0
+                bi = qreduce_unitnorm(bi;nb=nb)
+            end
+            Locb = bfind(tsupp, ltsupp, bi)
+            @inbounds add_to_expression!(rcons[Locb], pos[1][1])
+        else
+            if ipart == true
+                pos[1][1] = @variable(model, [1:4bs, 1:4bs], PSD,base_name="Q")
+            else
+                pos[1][1] = @variable(model, [1:bs, 1:bs], PSD,base_name="Q")
+            end
+            for t = 1:bs, r = 1:bs
+                a=deepcopy(basis[1][t])
+                b=deepcopy(basis[1][r])
+                @inbounds bi = qtermadd(a,b,n)
                 if nb > 0
                     bi = qreduce_unitnorm(bi;nb=nb)
                 end
-                # println(bi)
                 Locb = bfind(tsupp, ltsupp, bi)
-                @inbounds add_to_expression!(rcons[Locb], pos[1][1])
-            else
-                # pos[1][1] = @variable(model, [1:4bs, 1:4bs], PSD,base_name="Q")
-                pos[1][1] = @variable(model, [1:bs, 1:bs], PSD,base_name="Q")
-                Temp=[[UInt16[],UInt16[],UInt16[]]]
-                for t = 1:bs, r = 1:bs
-                    a=deepcopy(basis[1][t])
-                    b=deepcopy(basis[1][r])
-                    @inbounds bi = qtermadd(a,b,n)
-                    if nb > 0
-                        bi = qreduce_unitnorm(bi;nb=nb)
-                    end
-                    # if bi==[UInt16[],UInt16[],UInt16[]]||!(bi in Temp) 
-                    # println(bi)
-                    #     push!(Temp,bi)
-                    #     Locb = bfind(tsupp, ltsupp, bi)
-                    #     @inbounds add_to_expression!(rcons[Locb], pos[1][1][t,r])
-                    # end
-                    # push!(Temp,bi)
-                    Locb = bfind(tsupp, ltsupp, bi)
-                    # println(Locb)
-                    # println(basis[1][t],basis[1][r],bi,Locb)
-                    # if t == r
-                        @inbounds add_to_expression!(rcons[Locb], pos[1][1][t,r])
-                        # @inbounds add_to_expression!(rcons[Locb], pos[1][1][t,r]+pos[1][1][t+bs,r+bs]+pos[1][1][t+2*bs,r+2*bs]+pos[1][1][t+3*bs,r+3*bs])
-                        # @inbounds add_to_expression!(icons[Locb], pos[1][1][t+bs,r]-pos[1][1][t,r+bs]+pos[1][1][t+3*bs,r+2*bs]-pos[1][1][t+2*bs,r+3*bs]) 
-                        # @inbounds add_to_expression!(jcons[Locb], pos[1][1][t+2*bs,r]-pos[1][1][t,r+2*bs]-pos[1][1][t+3*bs,r+bs]+pos[1][1][t+bs,r+3*bs])
-                        # @inbounds add_to_expression!(kcons[Locb], pos[1][1][t+3*bs,r]-pos[1][1][t,r+3*bs]+pos[1][1][t+2*bs,r+bs]-pos[1][1][t+bs,r+2*bs])
-                    # else
-                        # @inbounds add_to_expression!(rcons[Locb], 2,pos[1][1][t,r])
-                        # @inbounds add_to_expression!(rcons[Locb], 2,pos[1][1][t,r]+pos[1][1][t+bs,r+bs]+pos[1][1][t+2*bs,r+2*bs]+pos[1][1][t+3*bs,r+3*bs])
-                        # @inbounds add_to_expression!(icons[Locb], 2,pos[1][1][t+bs,r]-pos[1][1][t,r+bs]+pos[1][1][t+3*bs,r+2*bs]-pos[1][1][t+2*bs,r+3*bs]) 
-                        # @inbounds add_to_expression!(jcons[Locb], 2,pos[1][1][t+2*bs,r]-pos[1][1][t,r+2*bs]-pos[1][1][t+3*bs,r+bs]+pos[1][1][t+bs,r+3*bs])
-                        # @inbounds add_to_expression!(kcons[Locb], 2,pos[1][1][t+3*bs,r]-pos[1][1][t,r+3*bs]+pos[1][1][t+2*bs,r+bs]-pos[1][1][t+bs,r+2*bs])
-                    # end               
-                end
+                if ipart == true
+                    @inbounds add_to_expression!(rcons[Locb], pos[1][1][t,r]+pos[1][1][t+bs,r+bs]+pos[1][1][t+2*bs,r+2*bs]+pos[1][1][t+3*bs,r+3*bs])
+                    @inbounds add_to_expression!(icons[Locb], pos[1][1][t+bs,r]-pos[1][1][t,r+bs]+pos[1][1][t+3*bs,r+2*bs]-pos[1][1][t+2*bs,r+3*bs]) 
+                    @inbounds add_to_expression!(jcons[Locb], pos[1][1][t+2*bs,r]-pos[1][1][t,r+2*bs]-pos[1][1][t+3*bs,r+bs]+pos[1][1][t+bs,r+3*bs])
+                    @inbounds add_to_expression!(kcons[Locb], pos[1][1][t+3*bs,r]-pos[1][1][t,r+3*bs]+pos[1][1][t+2*bs,r+bs]-pos[1][1][t+bs,r+2*bs])
+                else
+                    @inbounds add_to_expression!(rcons[Locb], pos[1][1][t,r])
+                end            
             end
+        end
         for k=1:m
             pos[k+1] = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, 1)
             bs = length(basis[k+1])
@@ -335,20 +230,29 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
                     if nb > 0
                         bi = qreduce_unitnorm(bi;nb=nb)
                     end
-                    # @inbounds bi = qtermadd3(a,c,b,n)
-                    # println(bi)
-                    # println(tsupp)
                     Locb = bfind(tsupp, ltsupp, bi)
                     @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1])
+                    if ipart == true
+                        @inbounds add_to_expression!(icons[Locb], imag_part(coe[k+1][s])[1], pos[k+1][1])
+                        @inbounds add_to_expression!(jcons[Locb], imag_part(coe[k+1][s])[2], pos[k+1][1])
+                        @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[3], pos[k+1][1])
+                    end
                 end 
             else
-                if k <= m-numeq
-                    pos[k+1][1] = @variable(model, [1:bs, 1:bs], PSD)
+                if ipart == true
+                    if k <= m-numeq
+                        pos[k+1][1] = @variable(model, [1:4bs, 1:4bs], PSD)
+                    else
+                        pos[k+1][1] = @variable(model, [1:4bs, 1:4bs], Symmetric)
+                    end
                 else
-                    pos[k+1][1] = @variable(model, [1:bs, 1:bs], Symmetric)
+                    if k <= m-numeq
+                        pos[k+1][1] = @variable(model, [1:bs, 1:bs], PSD)
+                    else
+                        pos[k+1][1] = @variable(model, [1:bs, 1:bs], Symmetric)
+                    end
                 end
                 for t = 1:bs, r = 1:bs
-                    Temp=[[UInt16[],UInt16[],UInt16[]]]
                     for s = 1:length(supp[k+1])
                         a=deepcopy(basis[k+1][t])
                         b=deepcopy(supp[k+1][s])
@@ -358,21 +262,39 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
                             bi = qreduce_unitnorm(bi;nb=nb)
                         end
                         Locb = bfind(tsupp, ltsupp, bi)
-                        # if Locb==nothing
-                        #     println(basis[k+1][t],supp[k+1][s],basis[k+1][r],bi)
-                        # end
-                        @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1][t,r])
+                        if ipart == true
+                            @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1][t,r]+pos[k+1][1][t+bs,r+bs]+pos[k+1][1][t+2*bs,r+2*bs]+pos[k+1][1][t+3*bs,r+3*bs])
+                            @inbounds add_to_expression!(rcons[Locb], imag_part(coe[k+1][s])[1], pos[k+1][1][t+bs,r]-pos[k+1][1][t,r+bs]+pos[k+1][1][t+3*bs,r+2*bs]-pos[k+1][1][t+2*bs,r+3*bs])
+                            @inbounds add_to_expression!(rcons[Locb], imag_part(coe[k+1][s])[2], pos[k+1][1][t+2*bs,r]-pos[k+1][1][t,r+2*bs]-pos[k+1][1][t+3*bs,r+bs]+pos[k+1][1][t+bs,r+3*bs])
+                            @inbounds add_to_expression!(rcons[Locb], imag_part(coe[k+1][s])[3], pos[k+1][1][t+3*bs,r]-pos[k+1][1][t,r+3*bs]+pos[k+1][1][t+2*bs,r+bs]-pos[k+1][1][t+bs,r+2*bs])
+
+                            @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[1], pos[k+1][1][t,r]+pos[k+1][1][t+bs,r+bs]+pos[k+1][1][t+2*bs,r+2*bs]+pos[k+1][1][t+3*bs,r+3*bs])
+                            @inbounds add_to_expression!(icons[Locb], real(coe[k+1][s]), pos[k+1][1][t+bs,r]-pos[k+1][1][t,r+bs]+pos[k+1][1][t+3*bs,r+2*bs]-pos[k+1][1][t+2*bs,r+3*bs])
+                            @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[3], pos[k+1][1][t+2*bs,r]-pos[k+1][1][t,r+2*bs]-pos[k+1][1][t+3*bs,r+bs]+pos[k+1][1][t+bs,r+3*bs])
+                            @inbounds add_to_expression!(icons[Locb], imag_part(coe[k+1][s])[2], pos[k+1][1][t+3*bs,r]-pos[k+1][1][t,r+3*bs]+pos[k+1][1][t+2*bs,r+bs]-pos[k+1][1][t+bs,r+2*bs])
+                                        
+                            @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[2], pos[k+1][1][t,r]+pos[k+1][1][t+bs,r+bs]+pos[k+1][1][t+2*bs,r+2*bs]+pos[k+1][1][t+3*bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[3], pos[k+1][1][t+bs,r]-pos[k+1][1][t,r+bs]+pos[k+1][1][t+3*bs,r+2*bs]-pos[k+1][1][t+2*bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), pos[k+1][1][t+2*bs,r]-pos[k+1][1][t,r+2*bs]-pos[k+1][1][t+3*bs,r+bs]+pos[k+1][1][t+bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[1], pos[k+1][1][t+3*bs,r]-pos[k+1][1][t,r+3*bs]+pos[k+1][1][t+2*bs,r+bs]-pos[k+1][1][t+bs,r+2*bs])
+                                            
+                            @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[3], pos[k+1][1][t,r]+pos[k+1][1][t+bs,r+bs]+pos[k+1][1][t+2*bs,r+2*bs]+pos[k+1][1][t+3*bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[2], pos[k+1][1][t+bs,r]-pos[k+1][1][t,r+bs]+pos[k+1][1][t+3*bs,r+2*bs]-pos[k+1][1][t+2*bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[1], pos[k+1][1][t+2*bs,r]-pos[k+1][1][t,r+2*bs]-pos[k+1][1][t+3*bs,r+bs]+pos[k+1][1][t+bs,r+3*bs])
+                            @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), pos[k+1][1][t+3*bs,r]-pos[k+1][1][t,r+3*bs]+pos[k+1][1][t+2*bs,r+bs]-pos[k+1][1][t+bs,r+2*bs])
+                        else
+                            @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), pos[k+1][1][t,r])
+                        end                   
                     end
                 end
             end
         end
         rbc = zeros(ltsupp)
-        # ibc = zeros(length(ltsupp))
-        # jbc = zeros(length(ltsupp))
-        # kbc = zeros(length(ltsupp))
-        # ibc = zeros(ltsupp)
-        # jbc = zeros(ltsupp)
-        # kbc = zeros(ltsupp)
+        if ipart == true
+            ibc = zeros(ltsupp)
+            jbc = zeros(ltsupp)
+            kbc = zeros(ltsupp)
+        end
         ncons = ltsupp
         # itsupp = nothing
         # ind = [item[1] != item[2] for item in tsupp]
@@ -393,24 +315,22 @@ function qsolvesdp(n, m, d, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, b
                 @error "The monomial basis is not enough!"
                 return nothing,ksupp,nothing,nothing,nothing
             else
-            rbc[Locb] = rbc[Locb]+real(coe[1][i])
-                # if supp[1][i][1] != supp[1][i][2]
-            # Locb = bfind(itsupp, length(itsupp), supp[1][i])
-            # ibc[Locb] = imag_part(coe[1][i])[1]
-            # jbc[Locb] = imag_part(coe[1][i])[2]
-            # kbc[Locb] = imag_part(coe[1][i])[3]
-                # end
+                rbc[Locb] = rbc[Locb]+real(coe[1][i])
+                if ipart == true
+                    ibc[Locb] = imag_part(coe[1][i])[1]
+                    jbc[Locb] = imag_part(coe[1][i])[2]
+                    kbc[Locb] = imag_part(coe[1][i])[3]
+                end
             end
         end
         @variable(model, lower)
         rcons[1] += lower
         @constraint(model, rcon[i=1:ltsupp], rcons[i]==rbc[i])
-        # @constraint(model, icon[i=1:ltsupp], icons[i]==ibc[i])
-        # @constraint(model, jcon[i=1:ltsupp], jcons[i]==jbc[i])
-        # @constraint(model, kcon[i=1:ltsupp], kcons[i]==kbc[i])
-        # @constraint(model, icon[i=1:length(itsupp)], icons[i]==ibc[i])
-        # @constraint(model, jcon[i=1:length(itsupp)], jcons[i]==jbc[i])
-        # @constraint(model, kcon[i=1:length(itsupp)], kcons[i]==kbc[i])
+        if ipart == true
+            @constraint(model, icon[i=1:ltsupp], icons[i]==ibc[i])
+            @constraint(model, jcon[i=1:ltsupp], jcons[i]==jbc[i])
+            @constraint(model, kcon[i=1:ltsupp], kcons[i]==kbc[i])
+        end
         @objective(model, Max, lower)
         end
         if QUIET == false
