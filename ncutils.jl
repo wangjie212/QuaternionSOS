@@ -113,6 +113,60 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     return transpose(monc)*A_symmetric*mon
 end
 
+using SparseArrays
+
+function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
+    mon=Monomial{false}[1]
+    for j=1:d
+        if conjugates!=false
+            append!(mon,monomials(q, j))
+        else
+            append!(mon,monomials(q[1:n], j))
+        end
+    end
+    monc=Monomial{false}[]
+    for i=1:length(mon)
+        temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
+        push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+        # push!(monc,temp(q[1]=>q[3],q[2]=>q[4],q[3]=>q[1],q[4]=>q[2]))
+    end
+    n=length(mon)
+    if coelimit!=false
+        A = 2 .* rand(rng,n, n) .- 1  # 生成范围在-1到1的随机矩阵
+        A_symmetric = (A + A') / 2
+    else
+        A_symmetric=Symmetric(rand(rng,n,n))
+    end
+    B = sparse_symmetric_binary_matrix(n,sparsity,rng)
+    return transpose(monc)*(A_symmetric.*B)*mon
+end
+
+function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
+    I = Int[]
+    J = Int[]
+    
+    # 遍历上三角（含对角线）生成索引
+    for i in 1:n
+        # 处理对角线元素
+        if rand(rng, Float64) < sparsity
+            push!(I, i)
+            push!(J, i)
+        end
+        
+        # 处理上三角非对角元素
+        for j in (i+1):n
+            if rand(rng, Float64) < sparsity
+                # 添加对称位置索引
+                push!(I, i); push!(J, j)
+                push!(I, j); push!(J, i)
+            end
+        end
+    end
+    
+    # 创建稀疏矩阵（自动合并重复项）
+    sparse(I, J, 1, n, n) .!= 0  # 转换为布尔型稀疏矩阵
+end
+
 function qrandomsymfunc(q,n,d,rng;conjugates=false)
     mon=Monomial{false}[1]
     for j=1:d
@@ -211,27 +265,27 @@ function get_qncbasis(n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=fa
         end
     end
     return basis
-end
+end 
 
-function bget_qncbasis(n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false)
+function bget_qncbasis(n, d, k; ind=Vector{UInt16}(1:2n), binary=false)
     basis=[[UInt16[],UInt16[],UInt16[]]]
     for i = 1:d
-        if conjubasis!=false
-        append!(basis, _get_qncbasis_deg2(n, i, ind=ind, binary=binary))
-        else
+        # if conjubasis!=false
+        # append!(basis, _get_qncbasis_deg2(n, i, ind=ind, binary=binary))
+        # else
         append!(basis, _get_qncbasis_deg(n, i, ind=ind, binary=binary))
-        end
+        # end
     end
     basistemp=deepcopy(basis)
-    if !conjubasis
-        for i=1:n
-            for j=1:length(basistemp)
-                a=deepcopy(basistemp[j])
-                ltemp=qtermadd([UInt16[],UInt16[],[UInt16(i)]],a,n)
+    # if !conjubasis
+        # for i=1:n
+            for i=1:length(basistemp)
+                a=deepcopy(basistemp[i])
+                ltemp=qtermadd([UInt16[],UInt16[],[UInt16(k)]],a,n)
                 push!(basis,ltemp)
             end
-        end
-    end
+        # end
+    # end
     unique!(basis)
     return basis
 end
@@ -308,7 +362,92 @@ function _get_qncbasis_deg2(n, d; ind=Vector{UInt16}(1:2n), binary=false)
         return [[UInt16[],UInt16[],UInt16[]]]
     end
 end
+#generate the standard monomial basis in the sparse form
+function get_qncbasis(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false) where T <: Union{UInt16, Int}
+    basis=[[UInt16[],UInt16[],UInt16[]]]
+    for i = 1:d
+        if conjubasis!=false
+        append!(basis, _get_qncbasis_deg2(var, n, i, ind=ind, binary=binary))
+        else
+        append!(basis, _get_qncbasis_deg(var, n, i, ind=ind, binary=binary))
+        end
+    end
+    return basis
+end
 
+function _get_qncbasis_deg(var::Vector{T}, n, d; ind=Vector{UInt16}(1:n), binary=false) where T <: Union{UInt16, Int}
+    var = var[var.<= ind[n]]
+    if d > 0
+        basis=[[UInt16[],UInt16[],UInt16[]]]
+        for i in var
+            temp = _get_qncbasis_deg(var,n, d-1, ind=ind, binary=binary)
+            if binary == false || d == 1
+                lm=length(temp)
+                for j =1:lm
+                    push!(temp[j][3],ind[i])
+                    append!(basis,temp)
+                end
+            else
+                for item in temp
+                    if item[3][end] != ind[i]
+                        push!(basis, [item[1],item[2],[item[3];ind[i]]])
+                    end
+                end
+            end
+        end
+        de=[]
+        for i = 1:length(basis)
+            if length(basis[i][1])+length(basis[i][2])+length(basis[i][3])<d
+                push!(de,i)
+            end
+        end
+        deleteat!(basis,de)
+        unique!(basis)
+        return basis
+    else
+        return [[UInt16[],UInt16[],UInt16[]]]
+    end
+end
+
+function _get_qncbasis_deg2(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), binary=false) where T <: Union{UInt16, Int}
+    if d > 0
+        basis=[[UInt16[],UInt16[],UInt16[]]]
+        for i in var
+            temp = _get_qncbasis_deg2(var,n, d-1, ind=ind, binary=binary)
+            if binary == false || d == 1
+                lm=length(temp)
+                for j =1:lm
+                    if  length(temp[j][3])!=0
+                        if temp[j][3][end]!= ind[i]-ind[n] && temp[j][3][end]!= ind[i]+ind[n]
+                        push!(temp[j][3],ind[i])
+                        else
+                        ab=(temp[j][3][end]<ind[i]) ? temp[j][3][end] : ind[i]
+                        push!(temp[j][1],ab)
+                        push!(temp[j][2],ab+ind[n])
+                        deleteat!(temp[j][3],length(temp[j][3]))
+                        end
+                    else
+                    push!(temp[j][3],ind[i])
+                    end
+                temp[j][1]=sort(temp[j][1])
+                temp[j][2]=sort(temp[j][2])
+                end
+            end
+            append!(basis,temp)
+        end       
+        de=[]
+        for i = 1:length(basis)
+            if length(basis[i][1])+length(basis[i][2])+length(basis[i][3])<d
+                push!(de,i)
+            end
+        end
+        deleteat!(basis,de)
+        unique!(basis)
+        return basis
+    else
+        return [[UInt16[],UInt16[],UInt16[]]]
+    end
+end
 function qreduce_unitnorm(a; nb=0)
     a = [UInt16[],UInt16[],copy(a[3])]
     return a
