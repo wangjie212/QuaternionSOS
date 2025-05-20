@@ -824,7 +824,8 @@ function clique_decomp(n, m, dc, supp::Vector{Vector{Vector{Vector{UInt16}}}}; o
     return cliques,cql,cliquesize
 end
 function get_blocks(m, l, d, tsupp, supp::Vector{Vector{Vector{Vector{UInt16}}}}, basis, ebasis; nb=0, normality=1, nvar=0, TS="block", ConjugateBasis=false, merge=false, md=3)
-    if (ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)
+    # if (ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)
+    if normality > 0
         uk = m + 1 + nvar
     else
         uk = m + 1 
@@ -845,12 +846,13 @@ function get_blocks(m, l, d, tsupp, supp::Vector{Vector{Vector{Vector{UInt16}}}}
         for k = 1:uk
             if k == 1
                 G = get_graph(tsupp, basis[1], nb=nb, ConjugateBasis=ConjugateBasis)
-            elseif ((ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)) && k <= 1 + nvar
-                G = get_graph(tsupp, basis[k], nb=nb, ConjugateBasis=true)
-            elseif ((ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)) && k > 1 + nvar
-                G = get_graph(tsupp, supp[k-1-nvar], basis[k], nb=nb, ConjugateBasis=ConjugateBasis)
+            # elseif ((ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)) && k <= 1 + nvar
+            elseif  normality > 0 && k <= 1 + nvar
+                G = get_graph(tsupp, basis[k], nb=nb)
+            elseif normality > 0 && k > 1 + nvar
+                G = get_graph(tsupp, supp[k-1-nvar], basis[k], nb=nb)
             else
-                G = get_graph(tsupp, supp[k-1], basis[k], nb=nb, ConjugateBasis=ConjugateBasis)
+                G = get_graph(tsupp, supp[k-1], basis[k], nb=nb)
             end
             if TS == "block"
                 blocks[k] = connected_components(G)
@@ -913,7 +915,7 @@ function assign_constraint(m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}
     end
     return I,J,ncc
 end
-function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0, ConjugateBasis=false)
+function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0)
     lb = length(basis)
     G = SimpleGraph(lb)
     ltsupp = length(tsupp)
@@ -931,7 +933,7 @@ function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0, Conjugate
     return G
 end
 
-function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, supp, basis; nb=0, ConjugateBasis=false)
+function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, supp, basis; nb=0)
     lb = length(basis)
     ltsupp = length(tsupp)
     G = SimpleGraph(lb)
