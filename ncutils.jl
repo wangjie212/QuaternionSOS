@@ -365,11 +365,13 @@ end
 #generate the standard monomial basis in the sparse form
 function get_qncbasis(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false) where T <: Union{UInt16, Int}
     basis=[[UInt16[],UInt16[],UInt16[]]]
+    temp = copy(var)
+    var_bar = unique([var;temp.+ind[n]])
     for i = 1:d
         if conjubasis!=false
-        append!(basis, _get_qncbasis_deg2(var, n, i, ind=ind, binary=binary))
+            append!(basis, _get_qncbasis_deg2(var_bar, n, i, ind=ind, binary=binary))
         else
-        append!(basis, _get_qncbasis_deg(var, n, i, ind=ind, binary=binary))
+            append!(basis, _get_qncbasis_deg(var, n, i, ind=ind, binary=binary))
         end
     end
     return basis

@@ -19,14 +19,14 @@ function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n::Int, d; numeq=0,
     else
         time = @elapsed begin
         CS = CS == true ? "MF" : CS
-        cliques,cql,cliquesize = clique_decomp(2n, m, dc, supp, order=d, alg=CS)
+        cliques,cql,cliquesize = clique_decomp(n, m, dc, supp, order=d, alg=CS)
         end
         if CS != false && QUIET == false
             mc = maximum(cliquesize)
             println("Obtained the variable cliques in $time seconds.\nThe maximal size of cliques is $mc.")
         end
     end
-    I,J,ncc = assign_constraint(m, numeq, supp, cliques, cql)
+    I,J,ncc = assign_constraint(n, m, numeq, supp, cliques, cql)
     rlorder = d*ones(Int, cql)
     # basis = Vector{Vector{Vector{Vector{UInt16}}}}(undef, m+1)
     # basis[1] = get_qncbasis(n, d; conjubasis=conjubasis)
@@ -796,16 +796,24 @@ function clique_decomp(n, m, dc, supp::Vector{Vector{Vector{Vector{UInt16}}}}; o
                     temp1 = copy(supp[i][j][3])
                     temp2 = copy(supp[i][j][3])
                     # println(temp)
-                    temp1 .=  [ x > UInt16(n/2) ? x - UInt16(n/2) : x for x in temp1]
-                    temp2 .=  [ x <= UInt16(n/2) ? x + UInt16(n/2) : x for x in temp2]
+                    # temp1 .=  [ x > UInt16(n/2) ? x - UInt16(n/2) : x for x in temp1]
+                    temp1 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp1]
+                    # temp2 .=  [ x <= UInt16(n/2) ? x + UInt16(n/2) : x for x in temp2]
                     # println(temp)
-                    add_clique!(G, unique([supp[i][j][1];supp[i][j][2];temp1;temp2;supp[i][j][3]]))
+                    # add_clique!(G, unique([supp[i][j][1];supp[i][j][2];temp1;temp2;supp[i][j][3]]))
+                    add_clique!(G, unique([supp[i][j][1];temp1]))
                     # add_clique!(G, unique([supp[i][j][1];supp[i][j][2];supp[i][j][3]]))
                 end
             else
-                temp = copy([supp[i][1][1];supp[i][1][2];supp[i][1][3]])
+                temp1 = copy(supp[i][1][3])
+                temp1 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp1]
+                # temp = copy([supp[i][1][1];supp[i][1][2];supp[i][1][3]])
+                temp = copy([supp[i][1][1];temp1])
                 for j = 2:length(supp[i])
-                    append!(temp, [supp[i][j][1];supp[i][j][2];supp[i][j][3]])
+                    temp2 = copy(supp[i][j][3])
+                    temp2 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp2]
+                    # append!(temp, [supp[i][j][1];supp[i][j][2];supp[i][j][3]])
+                    append!(temp, [supp[i][j][1];temp2])
                 end
                 add_clique!(G, unique(temp))
             end
@@ -887,24 +895,34 @@ function get_blocks(n, rlorder, I, J, supp::Vector{Vector{Vector{Vector{UInt16}}
             let 
                 # 临时计算修改后的第三元素（不实际修改原数据）
                 modified_3rd_l = [x > UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]
-                modified_3rd_g = [x <= UInt16(n) ? x + UInt16(n) : x for x in tsupp[j][3]]
-                issubset(union(tsupp[j][1], tsupp[j][2], modified_3rd_l, modified_3rd_g), cliques[i])
+                # modified_3rd_g = [x <= UInt16(n) ? x + UInt16(n) : x for x in tsupp[j][3]]
+                # issubset(union(tsupp[j][1], tsupp[j][2], modified_3rd_l, modified_3rd_g), cliques[i])
+                issubset(union(tsupp[j][1], modified_3rd_l), cliques[i])
             end 
             for j in eachindex(tsupp)
         ]]
-        # ksupp = TS == false ? nothing : tsupp[[issubset(union(tsupp[j][1], tsupp[j][2], tsupp[j][3].=[x > UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]), cliques[i]) for j in eachindex(tsupp)]]
+        # ksupp = TS == false ? nothing : tsupp[[issubset(union(tsupp[j][1], tsupp[j][2], tsupp[j][3].=[x <= UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]), cliques[i]) for j in eachindex(tsupp)]]
         # println(ksupp)
         blocks[i],eblocks[i],cl[i],blocksize[i] = get_blocks(length(I[i]), length(J[i]), rlorder[i], ksupp, supp[[I[i]; J[i]].+1], basis[i], 
         ebasis[i], TS=TS, ConjugateBasis=ConjugateBasis, merge=merge, md=md, nb=nb, normality=normality, nvar=cliquesize[i])
     end
     return blocks,eblocks,cl,blocksize
 end
-function assign_constraint(m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
+function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
     I = [Int[] for i=1:cql]
     J = [Int[] for i=1:cql]
     ncc = Int[]
     for i = 1:m
-        ind = findall(k->issubset(unique(reduce(vcat, [[item[1];item[2];item[3]] for item in supp[i+1]])), cliques[k]), 1:cql)
+        temp1 = copy(supp[i][1][3])
+        temp1 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp1]
+        temp = copy([supp[i][1][1];temp1])
+        for j = 2:length(supp[i])
+            temp2 = copy(supp[i][j][3])
+            temp2 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp2]
+            append!(temp, [supp[i][j][1];temp2])
+        end
+        ind = findall(k->issubset(unique(temp), cliques[k]), 1:cql)
+        # ind = findall(k->issubset(unique(reduce(vcat, [[item[1];item[2];item[3]] for item in supp[i+1]])), cliques[k]), 1:cql)
         if isempty(ind)
             push!(ncc, i)
         elseif i <= m - numeq
