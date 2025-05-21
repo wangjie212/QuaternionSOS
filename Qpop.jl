@@ -915,7 +915,7 @@ function assign_constraint(m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}
     end
     return I,J,ncc
 end
-function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0)
+function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0, ConjugateBasis=false)
     lb = length(basis)
     G = SimpleGraph(lb)
     ltsupp = length(tsupp)
@@ -933,7 +933,7 @@ function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0)
     return G
 end
 
-function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, supp, basis; nb=0)
+function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, supp, basis; nb=0, ConjugateBasis=false)
     lb = length(basis)
     ltsupp = length(tsupp)
     G = SimpleGraph(lb)
