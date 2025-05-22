@@ -1,8 +1,12 @@
-function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
+const Poly = DP.Polynomial{DP.Commutative{DP.CreationOrder}, Graded{LexOrder}, Float64}
+const NCPoly = DP.Polynomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}, Float64}
+const NCMono = DP.Monomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}}
+
+function qs_tssos_first(pop, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
     merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, solution=false, ipart=true, 
     dualize=false, balanced=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
-    writetofile=false, normality=0, NormalSparse=false, conjubasis=true) where {T<:Number}
-    supp,coe = Qpolys_info(pop, z, n)
+    writetofile=false, normality=0, NormalSparse=false, conjubasis=true)
+    supp,coe = QPolys_info(pop, z, n)
     println("*********************************** QSSOS ***********************************")
     println("QSSOS is launching...")
     if nb > 0
@@ -146,7 +150,7 @@ function qs_tssos_first(pop::Vector{Polynomial{false,T}}, z, n::Int, d; numeq=0,
 end
 end
 
-function Qpolys_info(pop, z, n)
+function QPolys_info(pop, z, n)
     coe = Vector{Vector{QuaternionF64}}(undef, length(pop))
     supp = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(pop))
     for k in eachindex(pop)
@@ -770,7 +774,7 @@ end
 function quaternion_to_real(qpop,q)
     n = Int(length(q)/2)
     @polyvar x[1:4n]
-    pop = Vector{Polynomial{true,Float64}}(undef, length(qpop))
+    pop = Vector{Poly}(undef, length(qpop))
     I=quat(0,1,0,0)
     J=quat(0,0,1,0)
     K=quat(0,0,0,1)

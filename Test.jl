@@ -6,7 +6,9 @@ using Quaternions
 using MosekTools
 using JuMP
 using LinearAlgebra
-
+using MultivariatePolynomials
+import MultivariatePolynomials as MP
+import DynamicPolynomials as DP
 import CliqueTrees
 
 include("D:/Programs/QuaternionSOS/ncutils.jl")
@@ -122,14 +124,14 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS="block", ipart=false,conjubasis=false, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 1, TS="MD", ipart=false,conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 ## unit norm
-@time qs_tssos_first([f;gn], q, n, 1, numeq=n, TS="block", ipart=false, conjubasis=false, QUIET=true)
-@time qs_tssos_first([f], q, n, 1, nb=n, TS="block", ipart=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f;gn], q, n, 1, numeq=n, TS="MD", ipart=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 1, nb=n, TS="MD", ipart=false, conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
-@time tssos_first(pop, x, 1, numeq=n, TS="block", solution=true, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
 
 
 # Test 2
@@ -142,7 +144,7 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS="block", ipart=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 1, TS="MD", ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 
@@ -161,9 +163,9 @@ g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS="block", ipart=false, conjubasis=true)
+@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS="MD", ipart=false, conjubasis=true)
 pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 2, QUIET=true, TS="block", solution=true)
+@time tssos_first(pop, x, 2, QUIET=true, TS="MD", solution=true)
 
 ## unit norm
 @time qs_tssos_first([f], q, n, 2, nb=n, TS=false, ipart=false, QUIET=true, conjubasis=true)
@@ -180,12 +182,12 @@ f = sparserandomsymfunc(q, n, 2, rng, 0.2, conjugates=false, coelimit=true)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, TS="block", ipart=false, conjubasis=true, QUIET=true) 
-@time qs_tssos_first([f, g], q, n, 2, normality = 1, TS="block", ipart=false, conjubasis=false, QUIET=true) 
+@time qs_tssos_first([f, g], q, n, 2, TS="MD", ipart=false, conjubasis=true, QUIET=true) 
+@time qs_tssos_first([f, g], q, n, 2, normality = 1, TS="MD", ipart=false, conjubasis=false, QUIET=true) 
 pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 2, TS="block", solution=true, QUIET=true)
+@time tssos_first(pop, x, 2, TS="MD", solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f;gn], q, n, 2, numeq=n, TS="block", ipart=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f;gn], q, n, 2, numeq=n, TS="MD", ipart=false, conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
 @time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)

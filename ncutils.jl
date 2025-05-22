@@ -62,7 +62,7 @@ function _qcyclic_canon(a::Vector{Vector{UInt16}},n)
     end
 end
 
-function _qcyclic_canon(w::Monomial{false})
+function _qcyclic_canon(w)
     ind = w.z .> 0
     wz = w.z[ind]
     wv = w.vars[ind]
@@ -89,7 +89,7 @@ function qcyclic_canon(supp, coe, n; type=QuaternionF64)
 end
 
 function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
-    mon=Monomial{false}[1]
+    mon = NCMono[1]
     for j=1:d
         if conjugates!=false
             append!(mon,monomials(q, j))
@@ -97,7 +97,7 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
             append!(mon,monomials(q[1:n], j))
         end
     end
-    monc=Monomial{false}[]
+    monc = NCMono[]
     for i=1:length(mon)
         temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
@@ -116,15 +116,15 @@ end
 using SparseArrays
 
 function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
-    mon=Monomial{false}[1]
+    mon=NCMono[1]
     for j=1:d
         if conjugates!=false
-            append!(mon,monomials(q, j))
+            append!(mon, MP.monomials(q, j))
         else
-            append!(mon,monomials(q[1:n], j))
+            append!(mon, MP.monomials(q[1:n], j))
         end
     end
-    monc=Monomial{false}[]
+    monc=NCMono[]
     for i=1:length(mon)
         temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
@@ -168,7 +168,7 @@ function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
 end
 
 function qrandomsymfunc(q,n,d,rng;conjugates=false)
-    mon=Monomial{false}[1]
+    mon=NCMono[1]
     for j=1:d
         if conjugates!=false
             append!(mon,monomials(q, j))
@@ -176,7 +176,7 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false)
             append!(mon,monomials(q[1:n], j))
         end
     end
-    monc=Monomial{false}[]
+    monc=NCMono[]
     for i=1:length(mon)
         temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
@@ -247,11 +247,11 @@ function star(a::Vector{Vector{UInt16}},n)
     end
 end
 
-function star(w::Monomial{false})
+function star(w)
     return prod(reverse(w.vars).^reverse(w.z))
 end
 
-function star(p::Polynomial{false})
+function star(p)
     return coefficients(p)'*star.(monomials(p))
 end
 
