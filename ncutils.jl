@@ -113,6 +113,38 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     return transpose(monc)*A_symmetric*mon
 end
 
+function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false)
+    f = 0*q[1]^0
+    g = DynamicPolynomials.Polynomial{DynamicPolynomials.NonCommutative{DynamicPolynomials.CreationOrder}, Graded{LexOrder}, Int64}[]
+    s = max(1, (n - size) ÷ (cn - 1)) 
+    for k = 1:cn
+        mon = NCMono[1]
+        for j=1:d
+            if conjugates!=false
+                append!(mon,monomials(vcat(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)],q[1 + (k-1)*s+n : min(1 + (k-1)*s + size - 1, n)+n]), j))
+            else
+                append!(mon,monomials(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)], j))
+            end
+        end
+        monc = NCMono[]
+        for i = 1:length(mon)
+            temp = prod(reverse(mon[i].vars).^reverse(mon[i].z))
+            push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+        end
+        n_mon=length(mon)
+        if coelimit!=false
+            A = 2 .* rand(rng,n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
+            A_symmetric = (A + A') / 2
+        else
+            A_symmetric=Symmetric(rand(rng,n_mon, n_mon))
+        end
+        f = f + transpose(monc)*A_symmetric*mon
+        push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
+    end
+    return f,g
+end
+
+
 using SparseArrays
 
 function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
@@ -140,6 +172,39 @@ function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
     B = sparse_symmetric_binary_matrix(n,sparsity,rng)
     return transpose(monc)*(A_symmetric.*B)*mon
 end
+
+function cliques_sparserandomsymfunc(q,n,cn,size,d,rng,sparsity;conjugates=false,coelimit=false)
+    f = 0*q[1]^0
+    g = DynamicPolynomials.Polynomial{DynamicPolynomials.NonCommutative{DynamicPolynomials.CreationOrder}, Graded{LexOrder}, Int64}[]
+    s = max(1, (n - size) ÷ (cn - 1)) 
+    for k = 1:cn
+        mon = NCMono[1]
+        for j=1:d
+            if conjugates!=false
+                append!(mon,monomials(vcat(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)],q[1 + (k-1)*s+n : min(1 + (k-1)*s + size - 1, n)+n]), j))
+            else
+                append!(mon,monomials(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)], j))
+            end
+        end
+        monc = NCMono[]
+        for i = 1:length(mon)
+            temp = prod(reverse(mon[i].vars).^reverse(mon[i].z))
+            push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+        end
+        n_mon=length(mon)
+        if coelimit!=false
+            A = 2 .* rand(rng,n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
+            A_symmetric = (A + A') / 2
+        else
+            A_symmetric=Symmetric(rand(rng,n_mon, n_mon))
+        end
+        B = sparse_symmetric_binary_matrix(n_mon,sparsity,rng)
+        f = f + transpose(monc)*(A_symmetric.*B)*mon
+        push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
+    end
+    return f,g
+end
+
 
 function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
     I = Int[]

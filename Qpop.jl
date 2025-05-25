@@ -84,7 +84,7 @@ function qs_tssos_first(pop, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",c
                     end
                 end
                 for s = 1:length(I[i])
-                    basis[i][s+1+cliquesize[i]] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[I[i][s]]/2)))
+                    basis[i][s+1+cliquesize[i]] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[I[i][s]]/2)); conjubasis=conjubasis)
                     if nb > 0
                         basis[i][s+1] = qreduce_unitnorm.(basis[i][s+1], nb=nb)
                         unique!(basis[i][s+1])
@@ -144,6 +144,7 @@ function qs_tssos_first(pop, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",c
     end
     time = @elapsed begin
     blocks,eblocks,cl,blocksize = get_blocks(n,rlorder, I, J, supp, cliques, cliquesize, cql, tsupp, basis, ebasis, TS=TS, ConjugateBasis=conjubasis, normality=normality, merge=merge, md=md, nb=nb)
+    # println(blocksize)
     opt,ksupp,SDP_status = qsolvesdp(n, m, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
     nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
     return opt
@@ -500,6 +501,7 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
         end
         epos = Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}(undef, cql)
         for i = 1:cql
+            # println(cliques[i],J[i])
             if !isempty(J[i])
                 epos[i] = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, length(J[i]))
                 for (j, k) in enumerate(J[i])
@@ -897,7 +899,6 @@ function get_blocks(n, rlorder, I, J, supp::Vector{Vector{Vector{Vector{UInt16}}
         # ksupp = TS ? tsupp[[issubset(union(tsupp[j][1], tsupp[j][2], temp_tsupp[j][3]), cliques[i]) for j = 1: length(tsupp)]] : nothing
         ksupp = TS == false ? nothing : tsupp[[
             let 
-                # 临时计算修改后的第三元素（不实际修改原数据）
                 modified_3rd_l = [x > UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]
                 # modified_3rd_g = [x <= UInt16(n) ? x + UInt16(n) : x for x in tsupp[j][3]]
                 # issubset(union(tsupp[j][1], tsupp[j][2], modified_3rd_l, modified_3rd_g), cliques[i])
@@ -917,13 +918,13 @@ function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}
     J = [Int[] for i=1:cql]
     ncc = Int[]
     for i = 1:m
-        temp1 = copy(supp[i][1][3])
+        temp1 = copy(supp[i+1][1][3])
         temp1 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp1]
         temp = copy([supp[i][1][1];temp1])
-        for j = 2:length(supp[i])
-            temp2 = copy(supp[i][j][3])
+        for j = 2:length(supp[i+1])
+            temp2 = copy(supp[i+1][j][3])
             temp2 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp2]
-            append!(temp, [supp[i][j][1];temp2])
+            append!(temp, [supp[i+1][j][1];temp2])
         end
         ind = findall(k->issubset(unique(temp), cliques[k]), 1:cql)
         # ind = findall(k->issubset(unique(reduce(vcat, [[item[1];item[2];item[3]] for item in supp[i+1]])), cliques[k]), 1:cql)
