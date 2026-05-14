@@ -16,194 +16,123 @@ import CliqueTrees
 include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/ncutils.jl")
 include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/Qpop.jl")
 
-# Test 1
-## n = 20 seed = 4,2,3; n = 40 seed = 1,2,3; n = 60 seed = 11,12,13
-rng = Xoshiro(11)
-n = 20
+
+
+#### Test 1 
+
+###set: f = [q]_1^*Q[q]_1, Q:real, n=20,40,60；
+
+rng = Xoshiro(30)
+n = 4
 @ncpolyvar q[1:2n]
-f = randomsymfunc(q, n, 1, rng, conjugates=false, coelimit=false)
+f,Fsupp,Fcoe = randomsymfunc(q, n, 1, rng, conjugates=false, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false,conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 
+#QSOS: basis[q]_1
+@time opt = qs_tssos_first([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=true, solution = true, QUIET=true)
+
+#RSOS: d=1
+pop,x = quaternion_to_real([f, g], q)
+@time tssos_first(pop, x, 1, TS=false,solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=false, QUIET=true)
+@time opt = qs_tssos_first([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, solution = true , QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
-@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+# @time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
 
-
-# Test 2
-# seed = 1,2,3
+### set: f = [q]_1^*Q[q]_1, Q:quaternion, n=10,20,30,40；
 rng = Xoshiro(1)
-n = 20
+n = 30
 @ncpolyvar q[1:2n]
-f = randomsymfunc(q, n, 1, rng, conjugates=true, coelimit=false)
+f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, rng; conjugates=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
+# QSOS: basis[q]_1
+@time opt,sol = qs_tssos_first([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = true, QUIET=true)
+
+# RSOS:d =1
+pop,x = quaternion_to_real([fr, g], q)
+@time tssos_first(pop, x, 1, TS=false, solution=false, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+# QSOS: basis[q]_1
+@time opt= qs_tssos_first([f], q, n, 1, nb=n, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = true, QUIET=true)
+pop,x = quaternion_to_real([fr;gn], q)
+@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=false, QUIET=true)
 
-# Test 3
-# seed = 11,12,13
-rng = Xoshiro(13)
-n = 5
+
+
+#### Test 2
+
+###set: f = [q,\bar(q)]_1^*Q[q,\bar(q)]_1, Q:real, n=20,40,60
+
+rng = Xoshiro(1)
+n = 2
 @ncpolyvar q[1:2n]
-f = randomsymfunc(q, n, 2, rng, conjugates=true, coelimit=true)
+f,Fsupp,Fcoe = randomsymfunc(q, n, 1, rng, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS=false, ipart=false, conjubasis=true)
+
+# QSOS: basis[q,\bar(q)]_1
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
+
+# RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 2, QUIET=true, TS=false, solution=true)
+@time opt,sol,data = tssos_first(pop, x, 1, TS=false, solution=true, QUIET=false)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, ipart=false, QUIET=true, conjubasis=true)
-pop,x = quaternion_to_real([f; gn], q)
-@time tssos_first(pop, x, 2, numeq=n, TS=false, QUIET=true)
+@time opt = qs_tssos_first([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, solution = true , QUIET=true)
+pop,x = quaternion_to_real([f;gn], q)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=false)
 
 
-# Test 4
-# seed = 30,60,90
-rng = Xoshiro(90)
-n = 5
+#### Test 3
+
+###set: f = [q]_2^*Q[q]_2, Q:real, n=1,2,3,4,5,6；
+
+rng = Xoshiro(10)
+n = 1
 @ncpolyvar q[1:2n]
-f = randomsymfunc(q, n, 2, rng, conjugates=false, coelimit=true)
+f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=false, coelimit=true)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 2, CS=false,TS=false, ipart=false, conjubasis=true, QUIET=true)
-@time qs_tssos_first([f, g], q, n, 2, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+# QSOS:basis[q]_2
+@time qs_tssos_first([f, g], q, n, 3, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=false, QUIET=true) 
+
+# strengthened QSOS :basis [q]_2+\bar(q_i)[q]_2
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+
+#QSOS: full basis [q,\bar(q)]_2
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
+
+#RSOS
 pop,x = quaternion_to_real([f, g], q)
 @time tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, ipart=false, conjubasis=false, QUIET=true)
+
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
 @time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
 
-# Test 5
-## n = 10,20,30 seed = 1,2,3
-rng = Xoshiro(1)
-n = 50
-@ncpolyvar q[1:2n]
-f,fr = qrandomsymfunc(q, n, 1, rng, conjugates=false)
-g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
 
-## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=true,conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([fr, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
+####Test4 correlative sparsity
 
-## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=true, conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([fr;gn], q)
-@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+### 按cliques构造二次函数 \sum_{i=1}^k[\q_i]_1^*Q_i[\q_i]_1 
 
-# sparsity
-
-# Test 1
-## seed = 1,2,3
-rng = Xoshiro(1)
-n = 10
-@ncpolyvar q[1:2n]
-f = sparserandomsymfunc(q, n, 1, rng, 0.1, conjugates=false, coelimit=false)
-g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
-
-## ball
-@time qs_tssos_first([f, g], q, n, 1, TS="MD", ipart=false,conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
-## unit norm
-# @time qs_tssos_first([f;gn], q, n, 1, numeq=n, TS="MD", ipart=false, conjubasis=false, QUIET=true)
-@time qs_tssos_first([f], q, n, 1, nb=n, TS="MD",CS=false,ipart=false, conjubasis=false, QUIET=false)
-pop,x = quaternion_to_real([f;gn], q)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
-
-
-# Test 2
-# seed = 1,2,3
-rng = Xoshiro(1)
-n = 40
-@ncpolyvar q[1:2n]
-f = sparserandomsymfunc(q, n, 1,rng, 0.1,conjugates=true, coelimit=false)
-g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
-
-## ball
-@time qs_tssos_first([f, g], q, n, 1, TS="MD", ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
-
-## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=true, QUIET=true)
-@time qs_tssos_first([f], q, n, 1, nb=n, TS="MD",CS=false,ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f; gn], q)
-# @time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
-
-# Test 3
-# seed = 11,12,13
-rng = Xoshiro(1)
-n = 5
-@ncpolyvar q[1:2n]
-f = sparserandomsymfunc(q, n, 2, rng, 0.2, conjugates=true, coelimit=true)
-g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
-
-## ball
-@time qs_tssos_first([f, g], q, n, 2, QUIET=true, TS="MD", ipart=false, conjubasis=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 2, QUIET=true, TS="MD", solution=true)
-
-## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS="MD",ipart=false, conjubasis=true, QUIET=false)
-pop,x = quaternion_to_real([f; gn], q)
-@time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
-@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=n, TS="MD", solution=false, QUIET=false)
-
-
-# Test 4
-# seed = 1,2,3 n= 
-rng = Xoshiro(3)
-n = 5
-@ncpolyvar q[1:2n]
-f = sparserandomsymfunc(q, n, 2, rng, 0.2, conjugates=false, coelimit=true)
-g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
-## ball
-@time qs_tssos_first([f, g], q, n, 2, TS="MD", ipart=false, conjubasis=true, QUIET=true) 
-@time qs_tssos_first([f, g], q, n, 2, normality = 1, TS="MD", ipart=false, conjubasis=false, QUIET=true) 
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 2, TS="MD", solution=true, QUIET=true)
-
-## unit norm
-@time qs_tssos_first([f], q, n, 2, nb=n, TS="MD",ipart=false, conjubasis=true, QUIET=false)
-# @time qs_tssos_first([f], q, n, 2, nb=n, TS="MD",normality = 1,ipart=false, conjubasis=false, QUIET=false)
-pop,x = quaternion_to_real([f; gn], q)
-@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=n, TS="MD", solution=false, QUIET=false)
-
-
-# 按cliques构造函数
-
-#Test5 [n,cn,size] = [50,7,8] [100,33,4],[150,16,10],[200,11,20]
-#Test5 [n,cn,size] = [50,17,4] [100,33,4],[200,67,4],[300,100,4]
+###[n,cn,size] = [100,33,4],[200,67,4],[300,100,4]
 
 rng = Xoshiro(1)
 n = 100
@@ -211,86 +140,67 @@ cn = 33 #number of cliques
 size =4 #cliquesize
 @ncpolyvar q[1:2n]
 # f,gs = cliques_sparserandomsymfunc(q, n, cn,size,1,rng, 0.1,conjugates=false, coelimit=false)
-f,gs = cliques_randomsymfunc(q, n, cn,size,1,rng,conjugates=false, coelimit=false)
+f,gs,Fsupp,Fcoe = cliques_randomsymfunc(q, n, cn,size,1,rng,conjugates=false, coelimit=false)
 
 ## sphere
-@time qs_tssos_first([f;gs], q, n, 1, numeq=cn, TS="MD",CS =false,ipart=false, conjubasis=false, QUIET=false)
+
+# QSOS: d=1
+@time qs_tssos_first([f;gs], q, n, 1,fsupp=Fsupp, fcoe=Fcoe, numeq=cn, TS=false,CS ="MF",ipart=false,conjubasis=true, QUIET=false)
+
+# RSOS: d=1
 pop,x = quaternion_to_real([f; gs], q)
 @time opt,sol,data = tssos_first(pop, x, 1, numeq=cn, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
 
 
 
-#Test6 [n,cn,size] = [10,3,4],[20,5,5],[30,6,6]
-#Test6 [n,cn,size] = [10,3,4],[20,7,4],[30,10,4]
+####Test5 
+
+### 按cliques构造四次函数 \sum_{i=1}^k[\q_i]_2^*Q_i[\q_i]_2
+
+###[n,cn,size] = [60,20,4], [90,30,4], [120,40,4]
+
 rng = Xoshiro(1)
-n = 30
-cn = 6 #number of cliques
-size =6 #cliquesize
+n = 60
+cn = 20 #number of cliques
+size =4 #cliquesize
 @ncpolyvar q[1:2n]
-f,gs = cliques_randomsymfunc(q, n, cn,size,2,rng,conjugates=false, coelimit=false)
+f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,rng,conjugates=false, coelimit=false)
 # f,g = cliques_sparserandomsymfunc(q, n, cn,size,2,rng, 0.05,conjugates=false, coelimit=false)
+
 ## sphere
-@time qs_tssos_first([f;gs], q, n, 2, numeq=cn, TS="MD",ipart=false, conjubasis=true, QUIET=false)
-@time qs_tssos_first([f;gs], q, n, 2, numeq=cn, TS="MD",ipart=false, normality = 1, conjubasis=false, QUIET=false)
+
+# QSOS :d=2
+@time qs_tssos_first([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, conjubasis=false, QUIET=false)
+
+# strengthened QSOS
+@time qs_tssos_first([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, normality = 1, conjubasis=false, QUIET=false)
+
+# RSOS :d=2
 pop,x = quaternion_to_real([f; gs], q)
 @time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS="MD", solution=true, QUIET=false)
 
-#Test7
 
-rng = Xoshiro(3)
-n = 100
-cn = 10
-size =11
-@ncpolyvar q[1:2n]
-f,g = cliques_sparserandomsymfunc(q, n, cn,size,1,rng, 0.1,conjugates=true, coelimit=false)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
+#### Application1 QMMC
 
-## ball
-@time qs_tssos_first([f, g], q, n, 1, TS="MD", ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
+### n = 20,30,40,60
 
-## sphere
-@time qs_tssos_first([f;g], q, n, 1, numeq=cn, TS="MD",CS=false,ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f; g], q)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=cn, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
-
-
-
-#Test8
-rng = Xoshiro(2)
-n = 7
-cn = 3
-size =3
-@ncpolyvar q[1:2n]
-f,g = cliques_sparserandomsymfunc(q, n, cn,size,2,rng, 0.05,conjugates=true, coelimit=false)
-println(g)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
-
-## sphere
-@time qs_tssos_first([f;g], q, n, 2, numeq=cn, TS="MD",ipart=false, conjubasis=true, QUIET=true)
-pop,x = quaternion_to_real([f; g], q)
-@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS="MD", solution=false, QUIET=false)
-
-@time opt,sol,data = tssos_first(pop, x, 2, numeq=cn, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
-
-# actual
-
-# Test1 
+### set
 using Serialization
-#step1 generate data
+
+## step1 generate data
 if !isdir("data")
     mkdir("data")
 end
+
 function create_sample_quaternion_vector(seed, n)
     rng = MersenneTwister(seed)   # 新建种子固定的随机数生成器
     return [quat(0, randn(rng), randn(rng), randn(rng)) for _ in 1:n]
 end
 
 function generate_data()
-    n = 15 # 每个样本的四元数向量长度
+    n = 20 # 每个样本的四元数向量长度
     class1 = [create_sample_quaternion_vector(i, n) for i in 1:5]
-    class2 = [create_sample_quaternion_vector(i+100, n) for i in 1:5]
+    class2 = [create_sample_quaternion_vector(i+100, n) for i in 1:5] #20,50,100
 
     serialize("data/class1.jls", class1)
     serialize("data/class2.jls", class2)
@@ -298,7 +208,7 @@ end
 
 generate_data()
 
-# step2
+## step2
 function load_data(path)
     return deserialize(path)
 end
@@ -342,70 +252,103 @@ end
 
 S_B , S_W = compute_scatter_matrices("data/class1.jls", "data/class2.jls")
 
-#step3 solve
+## step3 solve
 n = length(S_B[1,:])
 @ncpolyvar q[1:2n]  # n变量及共轭
+
 Q = -(S_B - S_W)
 Q_sym = (Q + Q') / 2
 f = transpose(q[n+1:2n])*Q_sym*q[1:n]
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 P = conj.(Q_sym)
 fr = transpose(q[1:n])*P*q[n+1:2n]
-@time qs_tssos_first([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false, QUIET=false)
+
+# QSOS d=1
+@time qs_tssos_first([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false,QUIET=false)
+
+# RSOS d=1
 pop,x = quaternion_to_real([fr;g], q)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=1, TS=false,solution=true, QUIET=false)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=1, TS="MD",solution=false, QUIET=false)
+
+# 从 moment矩阵里恢复近似最优解
+@time opt,sol = qs_tssos_first([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false, solution=true,QUIET=true)
+# 计算模长
+qnorm = norm(sol)
+# 如果模长不是1，则归一化
+if abs(qnorm - 1) > 1e-6  # 允许一定误差
+    sol = sol ./ qnorm
+end
+upper_bound = real(transpose(sol)*P*conj.(sol))
+println("Upper bound:",upper_bound)
 
 
-#Test2
+#### Application2 旋转同步
 
 # 生成单位四元数
-function rand_unit_quaternion()
-    v = randn(4)
+function rand_unit_quaternion(rng)
+    v = randn(rng,4)
     v ./= norm(v)
     return Quaternion(v[1], v[2], v[3], v[4])
 end
 
 # 设置参数
-n = 10 
-prob_density = 0.5  # 边的稀疏程度
-noise_level = 0.01  # 噪声大小
+n = 60                 # 节点个数
+rng = Xoshiro(1)        # 使用种子为1的伪随机数生成器（可复现）
+prob_density = 0.2     # 图的稀疏程度
+noise_level = 0.2       # 噪声大小
 
 # Step 1: 数据生成
-qs_true = [rand_unit_quaternion() for i in 1:n]
+qs_true = [rand_unit_quaternion(rng) for i in 1:n]
 
 edges_list = []
 for i in 1:n
     for j in i+1:n
-        if rand() < prob_density
+        if rand(rng) < prob_density
             push!(edges_list, (i, j))
         end
     end
 end
 
-Qij = Dict()
+Q = Dict()
 for (i,j) in edges_list
-    noise = rand_unit_quaternion()
-    Qij[(i,j)] = qs_true[i] * conj(qs_true[j]) + noise_level * noise
+    noise = rand_unit_quaternion(rng)
+    Q[(i,j)] = qs_true[i] * conj(qs_true[j]) + noise_level * noise
 end
-
 # Step 2: 构造目标函数
 @ncpolyvar q[1:2n]
 
 f = zero(q[1])
-for (i,j) in keys(Qij)
-    term = q[i+n]*Qij[(i,j)]/2*q[j]+ q[j+n]*conj(Qij[(i,j)])/2*q[i]
+for (i,j) in keys(Q)
+    term = q[i+n]*Q[(i,j)]/2*q[j]+ q[j+n]*conj(Q[(i,j)])/2*q[i]
     f -= term
 end
 gn = [1 - q[i]*q[i+n] for i in 1:n] 
 
-# Step 4: 
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false,CS=false,ipart=true, conjubasis=false, QUIET=false)
+# Step 3: Solve
+opt = @time qs_tssos_first([f], q, n, 1, nb=n, TS="MD",CS=false,ipart=true, conjubasis=false, solution=false,QUIET=false)
+# opt = @time qs_tssos_first([f], q, n, 1, nb=n, TS=false,CS=false,ipart=true, conjubasis=false, solution=false,QUIET=false)
+# Step 4 : qualify
+
+# TSSOS
 fr = zero(q[1])
-for (i,j) in keys(Qij)
-    term = q[i]*conj(Qij[(i,j)])/2*q[j+n]+ q[j]*Qij[(i,j)]/2*q[i+n]
+for (i,j) in keys(Q)
+    term = q[i]*conj(Q[(i,j)])/2*q[j+n]+ q[j]*Q[(i,j)]/2*q[i+n]
     fr -= term
 end
 pop,x = quaternion_to_real([fr;gn], q)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false,solution=true, QUIET=false)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
+# @time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false,solution=false, QUIET=false)
+# println(data.blocksize[1])
 
-
+# true value
+function objective(sol, Q)
+    f = zero(sol[1])
+    for (i,j) in keys(Q)
+        term = conj(sol[i])*Q[(i,j)]/2*sol[j] + conj(sol[j])*conj(Q[(i,j)])/2*sol[i]
+        f -= term
+    end
+    return real(f)
+end
+qs_all = vcat(qs_true, [conj(q) for q in qs_true])
+val_true = objective(qs_all, Q)
+println("true value:",val_true)

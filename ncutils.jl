@@ -43,12 +43,18 @@ function standardterm(a::Vector{Vector{UInt16}},n)
     end  
 end
 
-function qtermadd(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},n)
+function qtermaddleft(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},n)
     return standardterm([append!(star(a,n)[1],b[1]),append!(star(a,n)[2],b[2]),append!(star(a,n)[3],b[3])],n)
 end
+function qtermadd(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},n)
+    return standardterm([append!(a[1],star(b,n)[1]),append!(a[2],star(b,n)[2]),append!(a[3],star(b,n)[3])],n)
+end
 
-function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
+#= function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
     return standardterm([append!(star(a,n)[1],b[1],c[1]),append!(star(a,n)[2],b[2],c[2]),append!(star(a,n)[3],b[3],c[3])],n)
+end =#
+function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
+    return standardterm([append!(a[1],b[1],star(c,n)[1]),append!(a[2],b[2],star(c,n)[2]),append!(a[3],b[3],star(c,n)[3])],n)
 end
 
 function _qcyclic_canon(a::Vector{Vector{UInt16}},n)
@@ -88,6 +94,16 @@ function qcyclic_canon(supp, coe, n; type=QuaternionF64)
     return nsupp,ncoe
 end
 
+function mono_to_term(m, q, n)
+    varmap = Dict(q[i] => UInt16(i) for i in 1:length(q))
+    t = [UInt16[], UInt16[], UInt16[]]
+    for (v, z) in zip(m.vars, m.z)
+        idx = varmap[v]
+        append!(t[3], fill(idx, z))
+    end
+    return standardterm(t, n)
+end
+
 function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     mon = NCMono[1]
     for j=1:d
@@ -103,27 +119,50 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
         # push!(monc,temp(q[1]=>q[3],q[2]=>q[4],q[3]=>q[1],q[4]=>q[2]))
     end
-    n=length(mon)
+    r=length(mon)
     if coelimit!=false
-        A = 2 .* rand(rng,n, n) .- 1  # 生成范围在-1到1的随机矩阵
+        A = 2 .* rand(rng,r, r) .- 1  # 生成范围在-1到1的随机矩阵
         A_symmetric = (A + A') / 2
     else
-        A_symmetric=Symmetric(rand(rng,n,n))
+        A_symmetric=Symmetric(rand(rng,r,r))
     end
-    return transpose(monc)*A_symmetric*mon
+    #return transpose(monc)*A_symmetric*mon
+    #new
+    f = transpose(monc)*A_symmetric*mon
+    # 把 mon 转成内部 term
+    monterm = [mono_to_term(mon[i], q, n) for i in 1:r]
+
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
+
+    # 目标 support 按 w_j * w_i^* 的顺序生成
+    for i = 1:r, j = 1:r
+        if A_symmetric[i, j]!=0
+            a = deepcopy(monterm[i])
+            b = deepcopy(monterm[j])
+            bi = qtermadd(b, a, n)   # w_j * w_i^*
+            push!(fsupp, bi)
+            push!(fcoe, A_symmetric[i, j])
+        end
+    end
+
+    return f, fsupp, fcoe
 end
 
 function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false)
     f = 0*q[1]^0
     g = DynamicPolynomials.Polynomial{DynamicPolynomials.NonCommutative{DynamicPolynomials.CreationOrder}, Graded{LexOrder}, Int64}[]
-    s = max(1, (n - size) ÷ (cn - 1)) 
+    # s = max(1, (n - size) ÷ (cn - 1)) 
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
     for k = 1:cn
         mon = NCMono[1]
         for j=1:d
             if conjugates!=false
-                append!(mon,monomials(vcat(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)],q[1 + (k-1)*s+n : min(1 + (k-1)*s + size - 1, n)+n]), j))
+                append!(mon,monomials(vcat(q[1 + (k - 1) * (size - 1) : min(1 + k * (size - 1), n)],q[1 + (k - 1) * (size - 1)+n : min(1 + k * (size - 1), n)+n]), j))
             else
-                append!(mon,monomials(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)], j))
+                # append!(mon,monomials(q[1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)], j))
+                append!(mon,monomials(q[1 + (k - 1) * (size - 1) : min(1 + k * (size - 1), n)], j))
             end
         end
         monc = NCMono[]
@@ -139,9 +178,21 @@ function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false
             A_symmetric=Symmetric(rand(rng,n_mon, n_mon))
         end
         f = f + transpose(monc)*A_symmetric*mon
-        push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
+        # push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
+        push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k - 1) * (size - 1) : min(1 + k * (size - 1), n)))
+        monterm = [mono_to_term(mon[i], q, n) for i in 1:n_mon]
+        # 目标 support 按 w_j * w_i^* 的顺序生成
+        for i = 1:n_mon, j = 1:n_mon
+            if A_symmetric[i, j]!=0
+                a = deepcopy(monterm[i])
+                b = deepcopy(monterm[j])
+                bi = qtermadd(b, a, n)   # w_j * w_i^*
+                push!(fsupp, bi)
+                push!(fcoe, A_symmetric[i, j])
+            end
+        end
     end
-    return f,g
+    return f,g,fsupp,fcoe
 end
 
 
@@ -202,7 +253,22 @@ function cliques_sparserandomsymfunc(q,n,cn,size,d,rng,sparsity;conjugates=false
         f = f + transpose(monc)*(A_symmetric.*B)*mon
         push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
     end
-    return f,g
+    monterm = [mono_to_term(mon[i], q, n) for i in 1:n_mon]
+
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
+    A_sparsity = A_symmetric.*B
+    # 目标 support 按 w_j * w_i^* 的顺序生成
+    for i = 1:n_mon, j = 1:n_mon
+        if A_sparsity[i, j]!=0
+            a = deepcopy(monterm[i])
+            b = deepcopy(monterm[j])
+            bi = qtermadd(b, a, n)   # w_j * w_i^*
+            push!(fsupp, bi)
+            push!(fcoe, A_sparsity[i, j])
+        end
+    end
+    return f,g,fsupp,fcoe
 end
 
 
@@ -231,8 +297,9 @@ function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
     # 创建稀疏矩阵（自动合并重复项）
     sparse(I, J, 1, n, n) .!= 0  # 转换为布尔型稀疏矩阵
 end
+println(sparse_symmetric_binary_matrix(4,1.0,Xoshiro(1)))
 
-function qrandomsymfunc(q,n,d,rng;conjugates=false)
+function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
     mon=NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -247,12 +314,33 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false)
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
     end
     t=length(mon)
-    println(t)
         A = rand(rng,QuaternionF64,t,t) 
         A_symmetric = (A + adjoint(A)) / 2
-    # to real
-    B = conj.(A_symmetric)
-    return transpose(monc)*A_symmetric*mon, transpose(mon)*B*monc
+        # 把 mon 转成内部 term
+    monterm = [mono_to_term(mon[i], q, n) for i in 1:t]
+
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
+
+    # 目标 support 按 w_j * w_i^* 的顺序生成
+    for i = 1:t, j = 1:t
+        if A_symmetric[i, j]!=0
+            a = deepcopy(monterm[i])
+            b = deepcopy(monterm[j])
+            bi = qtermadd(b, a, n)   # w_j * w_i^*
+            push!(fsupp, bi)
+            push!(fcoe, A_symmetric[i, j])
+        end
+    end
+    if sparsity > 0.0
+        C = sparse_symmetric_binary_matrix(t,sparsity,rng)
+        B = conj.(A_symmetric.*C)
+        return transpose(monc)*(A_symmetric.*C)*mon, transpose(mon)*B*monc,fsupp,fcoe
+    else
+        # to real
+        B = conj.(A_symmetric)
+        return transpose(monc)*(A_symmetric)*mon, transpose(mon)*B*monc,fsupp,fcoe
+    end
 end
 
 function bfind(A, l, a)
