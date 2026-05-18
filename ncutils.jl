@@ -57,6 +57,10 @@ function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector
     return standardterm([append!(a[1],b[1],star(c,n)[1]),append!(a[2],b[2],star(c,n)[2]),append!(a[3],b[3],star(c,n)[3])],n)
 end
 
+function qtermadd3left(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
+    return standardterm([append!(star(a,n)[1],b[1],c[1]),append!(star(a,n)[2],b[2],c[2]),append!(star(a,n)[3],b[3],c[3])],n)
+end
+
 function _qcyclic_canon(a::Vector{Vector{UInt16}},n)
     if length(a[3])<=1
         return a
@@ -623,3 +627,110 @@ function qresort(supp, coe; nb=0)
     end
     return nsupp,ncoe
 end
+
+"""
+Canonical form for quaternion monomials under real-part equivalence:
+Re(m1) = Re(m2)
+
+Rule:
+- ignore ordering under real part symmetry
+- treat (q_i q_j) ~ (q_j q_i)
+- treat conjugate-reversed forms as identical
+"""
+# function canonical_qmono(m::Vector{Vector{UInt16}})
+#     # m = [real, imag, vars]
+
+#     # copy to avoid mutating original
+#     r = copy(m[1])
+#     i = copy(m[2])
+#     v = copy(m[3])
+
+#     # sort real and imag parts (safe)
+#     sort!(r)
+#     sort!(i)
+
+#     # IMPORTANT: canonicalize product part
+#     if length(v) > 1
+#         # for quadratic terms: enforce ordering
+#         # q1 q2 and q2 q1 -> same representation
+#         v = sort(v)
+#     end
+
+#     return [r, i, v]
+# end
+# function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
+
+#     # Step 1: normalize ordering inside real/imag
+#     r = sort(copy(m[1]))
+#     i = sort(copy(m[2]))
+#     v = copy(m[3])
+
+#     # Step 2: canonical permutation form
+#     v = sort(v)
+
+#     m1 = [r, i, v]
+
+#     # Step 3: conjugate version using YOUR star()
+#     m2 = star(deepcopy(m1), n)
+
+#     # Step 4: choose canonical representative
+#     if m2[3] < m1[3]
+#         return m2
+#     else
+#         return m1
+#     end
+# end
+function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
+
+    # keep scalar parts normalized
+    r = sort(deepcopy(m[1]))
+    im = sort(copy(m[2]))
+
+    # DO NOT SORT quaternion order
+    v = deepcopy(m[3])
+
+    # empty monomial
+    if isempty(v)
+        return [r, im, v]
+    end
+
+    ########################################
+    # Step 1: cyclic canonicalization
+    ########################################
+
+    rotations = Vector{Vector{UInt16}}()
+
+    d = length(v)
+
+    for k in 0:d-1
+        rot = vcat(v[k+1:end], v[1:k])
+        push!(rotations, rot)
+    end
+
+    # lexicographically minimal rotation
+    v_cyclic = minimum(rotations)
+
+    m1 = standardterm([r, im, v_cyclic],n)
+    # println(m1)
+
+    ########################################
+    # Step 2: conjugate canonicalization
+    ########################################
+
+    # star() should reverse order correctly
+    # m2 = star(deepcopy(m), n)
+    # println(m2)
+
+    ########################################
+    # Step 3: choose lexicographically smaller
+    ########################################
+
+    # if m2[3] < m1[3]
+    #     return m2
+    # else
+    #     return m1
+    # end
+    return m1
+end
+
+println(canonical_qmono(Vector{UInt16}[[], [], [0x0004, 0x0003]], 2))

@@ -22,8 +22,8 @@ include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/Qpop.jl")
 
 ###set: f = [q]_1^*Q[q]_1, Q:real, n=20,40,60；
 
-rng = Xoshiro(30)
-n = 4
+rng = Xoshiro(1)
+n = 40
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, rng, conjugates=false, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -73,7 +73,7 @@ pop,x = quaternion_to_real([fr;gn], q)
 ###set: f = [q,\bar(q)]_1^*Q[q,\bar(q)]_1, Q:real, n=20,40,60
 
 rng = Xoshiro(1)
-n = 2
+n = 60
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, rng, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -82,24 +82,28 @@ gn = [1 - q[i]*q[i+n] for i = 1:n]
 ## ball
 
 # QSOS: basis[q,\bar(q)]_1
-@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
 
 # RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
 @time opt,sol,data = tssos_first(pop, x, 1, TS=false, solution=true, QUIET=false)
 
 ## unit norm
-@time opt = qs_tssos_first([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, solution = true , QUIET=true)
+@time opt = qs_tssos_first([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
-@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=false)
+@time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
+# opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
+# ub = local_solution([data.obj; data.eq_cons], data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
+# println(ub)
 
 
 #### Test 3
 
 ###set: f = [q]_2^*Q[q]_2, Q:real, n=1,2,3,4,5,6；
 
-rng = Xoshiro(10)
-n = 1
+rng = Xoshiro(2)
+n = 6
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=false, coelimit=true)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -107,7 +111,7 @@ gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
 # QSOS:basis[q]_2
-@time qs_tssos_first([f, g], q, n, 3, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=false, QUIET=true) 
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=false, QUIET=true) 
 
 # strengthened QSOS :basis [q]_2+\bar(q_i)[q]_2
 @time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
@@ -122,8 +126,9 @@ pop,x = quaternion_to_real([f, g], q)
 ## unit norm
 
 @time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, QUIET=true)
-@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
 @time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f;gn], q, n, 2, numeq=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
 @time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
 
@@ -352,3 +357,71 @@ end
 qs_all = vcat(qs_true, [conj(q) for q in qs_true])
 val_true = objective(qs_all, Q)
 println("true value:",val_true)
+
+
+###set: f = [q]_2^*Q[q]_2, Q:real, n=1,2,3,4,5,6；
+
+rng = Xoshiro(3)
+n = 2
+@ncpolyvar q[1:2n]
+f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=true, coelimit=true)
+g = 1 - sum(q[i]*q[i+n] for i = 1:n)
+gn = [1 - q[i]*q[i+n] for i = 1:n]
+
+## ball
+# QSOS:basis[q]_2
+@time qs_tssos_first([f, g], q, n, 3, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=false, QUIET=true) 
+
+# strengthened QSOS :basis [q]_2+\bar(q_i)[q]_2
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+
+#QSOS: full basis [q,\bar(q)]_2
+@time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
+
+#RSOS
+pop,x = quaternion_to_real([f, g], q)
+@time tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
+
+## unit norm
+
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, CS=false,TS=false, ipart=false, normality = 1,conjubasis=false, QUIET=true)
+@time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+pop,x = quaternion_to_real([f; gn], q)
+@time tssos_first(pop, x, 3, numeq=n, TS=false, solution=true, QUIET=true)
+
+
+n = 3
+@ncpolyvar q[1:2n]
+# f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=true, coelimit=true)
+# f = (q[1]*q[2]-q[2]*q[1])+(q[4]*q[3]-q[3]*q[4])
+# f = q[1]*q[2]*q[3]*q[4]+q[8]*q[7]*q[6]*q[5]
+# f = q[3]*q[4]*q[3]*q[2]+q[4]*q[1]*q[2]*q[1]
+f = q[1]*q[2]*q[3]+q[6]*q[5]*q[4]-q[1]*q[3]*q[2]-q[5]*q[6]*q[4]
+gn = [1 - q[i]*q[i+n] for i = 1:n]
+@time qs_tssos_first([f], q, n, 2, nb=n, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+pop,x = quaternion_to_real([f; gn], q)
+@time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
+println( QPolys_info([f],q,n))
+
+n = 2
+@ncpolyvar q[1:2n]
+g = 1 - sum(q[i]*q[i+n] for i = 1:n)
+f_non = q[1]^2+q[2]^2+q[3]^2+q[4]^2+q[1]*q[2]+q[4]*q[3]+q[1]*q[4]+q[2]*q[3]
+@time opt= qs_tssos_first([f_non, g], q, n, 1, TS=false, ipart=false,conjubasis=true, QUIET=true)
+pop,x = quaternion_to_real([f_non, g], q)
+@time tssos_first(pop, x, 2, TS=false, solution=false, QUIET=false)
+
+n = 3
+@ncpolyvar q[1:2n]
+gn = [1 - q[i]*q[i+n] for i = 1:n]
+f_non = 1+1/4*(q[1]+q[4])*(q[2]+q[5])+1/4*(q[2]+q[5])*(q[3]+q[6])+1/4*(q[3]+q[6])*(q[1]+q[4])
+f_non = 1+1/8*(q[1]+q[4])*(q[2]+q[5])+1/8*(q[2]+q[5])*(q[1]+q[4])+1/8*(q[2]+q[5])*(q[3]+q[6])+1/8*(q[3]+q[6])*(q[2]+q[5])+1/8*(q[3]+q[6])*(q[1]+q[4])+1/8*(q[1]+q[4])*(q[3]+q[6])
+@time qs_tssos_first([f_non], q, n, 1 , nb=n, TS=false, ipart=false,conjubasis=true, QUIET=true)
+@time qs_tssos_first([f_non], q, n, 2 , nb=n, TS=false, ipart=false,conjubasis=true, QUIET=true)
+@time qs_tssos_first([f_non;gn], q, n, 3 , numeq=n, TS=false, ipart=false,conjubasis=true, QUIET=true)
+pop,x = quaternion_to_real([f_non;gn], q)
+@time tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=false)
+
+
+
