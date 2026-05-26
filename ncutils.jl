@@ -1,4 +1,5 @@
-function standardterm(a::Vector{Vector{UInt16}},n)
+function standardterm(b::Vector{Vector{UInt16}},n)
+    a =deepcopy(b)
     if length(a[3])<=1
         a[1]=sort(a[1])
         a[2]=sort(a[2])
@@ -318,8 +319,8 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
     end
     t=length(mon)
-        A = rand(rng,QuaternionF64,t,t) 
-        A_symmetric = (A + adjoint(A)) / 2
+    A = rand(rng,QuaternionF64,t,t) 
+    A_symmetric = (A + adjoint(A)) / 2
         # 把 mon 转成内部 term
     monterm = [mono_to_term(mon[i], q, n) for i in 1:t]
 
@@ -331,9 +332,18 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
         if A_symmetric[i, j]!=0
             a = deepcopy(monterm[i])
             b = deepcopy(monterm[j])
-            bi = qtermadd(b, a, n)   # w_j * w_i^*
-            push!(fsupp, bi)
-            push!(fcoe, A_symmetric[i, j])
+            bi = qtermadd(b, a, n) 
+            # bi = qtermaddleft(a, b, n) 
+            idx = findfirst(x -> x == bi, fsupp)
+
+            if idx === nothing
+                push!(fsupp, bi)
+                push!(fcoe, A_symmetric[i,j])
+            else
+                fcoe[idx] += A_symmetric[i,j]
+            end  # w_j * w_i^*
+            # push!(fsupp, bi)
+            # push!(fcoe, A_symmetric[i, j])
         end
     end
     if sparsity > 0.0
@@ -342,10 +352,205 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
         return transpose(monc)*(A_symmetric.*C)*mon, transpose(mon)*B*monc,fsupp,fcoe
     else
         # to real
-        B = conj.(A_symmetric)
+        # B = conj.(A_symmetric)
+        # return transpose(monc)*(A_symmetric)*mon, transpose(mon)*B*monc,fsupp,fcoe
+        # for i = 1:t, j = 1:t
+        #     if A_symmetric[i, j]!=0
+        #         a = deepcopy(monterm[i])
+        #         b = deepcopy(monterm[j])
+        #         bi = qtermadd(b, a, n)   # w_j * w_i^*
+        #         push!(fsupp, bi)
+        #         push!(fcoe, A_symmetric[i, j])
+        #     end
+        # end
+        # fr = deepcopy(monterm[1])
+        # for i = 1:t, j = 1:t
+        #     if A_symmetric[i, j]!=0
+        #         a = deepcopy(monterm[i])
+        #         b = deepcopy(monterm[j])
+        #         bi = qtermadd(b, a, n) 
+        #         fr += A_symmetric[i, j]*bi
+        #     end
+        # end
+        B = transpose(A_symmetric)
         return transpose(monc)*(A_symmetric)*mon, transpose(mon)*B*monc,fsupp,fcoe
+
     end
 end
+function qrandomsymfunc2(q,n,d,rng,Q;conjugates=false, sparsity = 0.0,given=false)
+    mon=NCMono[1]
+    for j=1:d
+        if conjugates!=false
+            append!(mon,monomials(q, j))
+        else
+            append!(mon,monomials(q[1:n], j))
+        end
+    end
+    monc=NCMono[]
+    for i=1:length(mon)
+        temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
+        push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+    end
+    t=length(mon)
+    if given == false
+        # A = rand(rng,QuaternionF64,t,t) 
+        # A_symmetric = (A + adjoint(A)) / 2
+        # A_symmetric = rand_hermitian_int_quat(rng, t, 10)
+        A_symmetric = sparse_hermitian_int_quat(rng, t, 0.2, 10)
+    else
+        A_symmetric = Q
+    end
+        # 把 mon 转成内部 term
+    monterm = [mono_to_term(mon[i], q, n) for i in 1:t]
+
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
+
+    # 目标 support 按 w_j * w_i^* 的顺序生成
+    for i = 1:t, j = 1:t
+        if A_symmetric[i, j]!=0
+            a = deepcopy(monterm[i])
+            b = deepcopy(monterm[j])
+            println(i,j,a,b)
+            bi = qtermadd(b, a, n) 
+            # bi = qtermaddleft(a, b, n) 
+            idx = findfirst(x -> x == bi, fsupp)
+
+            if idx === nothing
+                push!(fsupp, bi)
+                push!(fcoe, A_symmetric[i,j])
+            else
+                fcoe[idx] += A_symmetric[i,j]
+            end  # w_j * w_i^*
+            # push!(fsupp, bi)
+            # push!(fcoe, A_symmetric[i, j])
+        end
+    end
+    if sparsity > 0.0
+        C = sparse_symmetric_binary_matrix(t,sparsity,rng)
+        B = conj.(A_symmetric.*C)
+        return transpose(monc)*(A_symmetric.*C)*mon, transpose(mon)*B*monc,fsupp,fcoe
+    else
+        # to real
+        # B = conj.(A_symmetric)
+        # return transpose(monc)*(A_symmetric)*mon, transpose(mon)*B*monc,fsupp,fcoe
+        # for i = 1:t, j = 1:t
+        #     if A_symmetric[i, j]!=0
+        #         a = deepcopy(monterm[i])
+        #         b = deepcopy(monterm[j])
+        #         bi = qtermadd(b, a, n)   # w_j * w_i^*
+        #         push!(fsupp, bi)
+        #         push!(fcoe, A_symmetric[i, j])
+        #     end
+        # end
+        # fr = deepcopy(monterm[1])
+        # for i = 1:t, j = 1:t
+        #     if A_symmetric[i, j]!=0
+        #         a = deepcopy(monterm[i])
+        #         b = deepcopy(monterm[j])
+        #         bi = qtermadd(b, a, n) 
+        #         fr += A_symmetric[i, j]*bi
+        #     end
+        # end
+        B = transpose(A_symmetric)
+        return transpose(monc)*(A_symmetric)*mon, transpose(mon)*B*monc,fsupp,fcoe
+
+    end
+end
+# using Quaternions, LinearAlgebra, SparseArrays
+
+# """
+# 生成稀疏 Hermitian 四元数矩阵，元素为整数四元数。
+
+# 参数:
+# - rng: 随机数生成器
+# - t: 矩阵维度
+# - density: 非零元密度（0~1），实际控制上三角（含对角）的填充率
+# - bound: 整数分量的取值范围（-bound 到 bound）
+# - zero_diag: 是否允许对角线为零（默认 false，对角线至少非零以保持可逆性？可根据需求调整）
+# """
+function sparse_hermitian_int_quat(rng, t, density=0.2, bound=10, zero_diag=false)
+    # 预分配稀疏矩阵存储（COO 格式）
+    I = Int[]
+    J = Int[]
+    V = Quaternion{Int}[]
+    
+    for i in 1:t
+        # 对角线：至少一个非零（除非 zero_diag=true）
+        if zero_diag
+            if rand(rng) < density
+                a = rand(rng, -bound:bound)
+                push!(I, i); push!(J, i); push!(V, quat(a, 0, 0, 0))
+            end
+        else
+            # 对角线总是非零（实数整数）
+            a = rand(rng, -bound:bound)
+            # 可选：避免全零矩阵，确保至少一个非零
+            push!(I, i); push!(J, i); push!(V, quat(a, 0, 0, 0))
+        end
+        
+        # 上三角部分 (i < j)
+        for j in i+1:t
+            if rand(rng) < density
+                a = rand(rng, -bound:bound)
+                b = rand(rng, -bound:bound)
+                c = rand(rng, -bound:bound)
+                d = rand(rng, -bound:bound)
+                q = quat(a, b, c, d)
+                println(i,j)
+                push!(I, i); push!(J, j); push!(V, q)
+                # 下三角共轭对称将自动由 sparse 构造时处理？不，我们需要显式添加下三角以得到完整矩阵
+                # 但最终若需完整矩阵，可先构建上三角，再镜像共轭。
+            end
+        end
+    end
+    
+    # 构建上三角稀疏矩阵
+    Q_tri = sparse(I, J, V, t, t)
+    # 补全为 Hermitian：下三角 = adjoint(上三角)
+    Q = Q_tri + adjoint(Q_tri) - Diagonal(diag(Q_tri))
+    for i = 1:7
+        Q[i,i]= quat(0,0,0,0)
+    end
+    Q[1,6] = 0
+    Q[6,1] = 0
+    Q[2,4] = quat(1,1,0,0)
+    Q[4,2] = quat(1,-1,0,0)
+    Q[2,6] = quat(1,0,0,0)
+    Q[6,2] = quat(1,0,0,0)
+    Q[5,7] = quat(1,0,0,0)
+    Q[7,5] = quat(1,0,0,0)
+    # Q[2,4] = 0
+    # Q[4,2] = 0
+    # Q[2,6] = 0
+    # Q[6,2] = 0
+    # Q[5,7] = 0
+    # Q[7,5] = 0
+    # 减去重复的对角线
+    return Q
+end
+function rand_hermitian_int_quat(rng, t, bound=10)
+    Q = zeros(Quaternion{Int}, t, t)
+    for i in 1:t
+        for j in 1:i
+            if i == j
+                # 对角线：实数整数
+                Q[i,i] = quat(rand(rng, -bound:bound), 0, 0, 0)
+            else
+                # 下三角：随机整数四元数
+                a = rand(rng, -bound:bound)
+                b = rand(rng, -bound:bound)
+                c = rand(rng, -bound:bound)
+                d = rand(rng, -bound:bound)
+                q = quat(a, b, c, d)
+                Q[i,j] = q
+                Q[j,i] = conj(q)   # 共轭填充上三角
+            end
+        end
+    end
+    return Q
+end
+
 
 function bfind(A, l, a)
     if l == 0
@@ -378,7 +583,7 @@ function ncbfind(A, l, a)
     while low <= high
         mid = Int(ceil(1/2*(low+high)))
         if A[mid] == a
-           return mid
+            return mid
         elseif A[mid] < a
             high = mid - 1
         else
@@ -389,6 +594,7 @@ function ncbfind(A, l, a)
 end
 
 function star(a::Vector{Vector{UInt16}},n)
+    # a = deepcopy(b)
     if length(a[3])==0
         return a
     else
@@ -607,14 +813,15 @@ function _get_qncbasis_deg2(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), bina
         return [[UInt16[],UInt16[],UInt16[]]]
     end
 end
-function qreduce_unitnorm(a; nb=0)
-    a = [UInt16[],UInt16[],copy(a[3])]
+function qreduce_unitnorm(b,n; nb=0)
+    b = standardterm(b, n)
+    a = [UInt16[],UInt16[],copy(b[3])]
     return a
 end
 
-function qresort(supp, coe; nb=0)
+function qresort(supp, coe, n; nb=0)
     if nb > 0
-        supp = qreduce_unitnorm.(supp, nb=nb)
+        supp = qreduce_unitnorm.(supp,n,nb=nb)
     end
     nsupp = deepcopy(supp)
     sort!(nsupp)
@@ -682,9 +889,9 @@ Rule:
 # end
 function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
 
-    # keep scalar parts normalized
+    #keep scalar parts normalized
     r = sort(deepcopy(m[1]))
-    im = sort(copy(m[2]))
+    im = sort(deepcopy(m[2]))
 
     # DO NOT SORT quaternion order
     v = deepcopy(m[3])
@@ -718,8 +925,8 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     ########################################
 
     # star() should reverse order correctly
-    # m2 = star(deepcopy(m), n)
-    # println(m2)
+    # m2 = star(deepcopy(m1), n)
+    # # println(m2)
 
     ########################################
     # Step 3: choose lexicographically smaller
@@ -731,6 +938,21 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     #     return m1
     # end
     return m1
+    # return m
+end
+function skew_entry(X,t,r,bs)
+
+    if t < r
+        idx = Int((2bs-t)*(t-1)/2) + (r-t)
+        return X[idx]
+
+    elseif t > r
+        idx = Int((2bs-r)*(r-1)/2) + (t-r)
+        return -X[idx]
+
+    else
+        return 0.0
+    end
 end
 
-println(canonical_qmono(Vector{UInt16}[[], [], [0x0004, 0x0003]], 2))
+# println(canonical_qmono(Vector{UInt16}[[], [], [0x0004, 0x0003]], 2))
