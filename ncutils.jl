@@ -58,7 +58,10 @@ function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector
     return standardterm([append!(a[1],b[1],star(c,n)[1]),append!(a[2],b[2],star(c,n)[2]),append!(a[3],b[3],star(c,n)[3])],n)
 end
 
-function qtermadd3left(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
+function qtermadd3left(a1::Vector{Vector{UInt16}},b1::Vector{Vector{UInt16}},c1::Vector{Vector{UInt16}},n)
+    a = deepcopy(a1)
+    b = deepcopy(b1)
+    c = deepcopy(c1)
     return standardterm([append!(star(a,n)[1],b[1],c[1]),append!(star(a,n)[2],b[2],c[2]),append!(star(a,n)[3],b[3],c[3])],n)
 end
 
@@ -131,6 +134,51 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     else
         A_symmetric=Symmetric(rand(rng,r,r))
     end
+    #return transpose(monc)*A_symmetric*mon
+    #new
+    f = transpose(monc)*A_symmetric*mon
+    # 把 mon 转成内部 term
+    monterm = [mono_to_term(mon[i], q, n) for i in 1:r]
+
+    fsupp = Vector{Vector{UInt16}}[]
+    fcoe = QuaternionF64[]
+
+    # 目标 support 按 w_j * w_i^* 的顺序生成
+    for i = 1:r, j = 1:r
+        if A_symmetric[i, j]!=0
+            a = deepcopy(monterm[i])
+            b = deepcopy(monterm[j])
+            bi = qtermadd(b, a, n)   # w_j * w_i^*
+            push!(fsupp, bi)
+            push!(fcoe, A_symmetric[i, j])
+        end
+    end
+
+    return f, fsupp, fcoe
+end
+function randomsymfunc2(q,n,d,rng;conjugates=false,coelimit=false)
+    mon = NCMono[1]
+    for j=1:d
+        if conjugates!=false
+            append!(mon,monomials(q, j))
+        else
+            append!(mon,monomials(q[1:n], j))
+        end
+    end
+    monc = NCMono[]
+    for i=1:length(mon)
+        temp=prod(reverse(mon[i].vars).^reverse(mon[i].z))
+        push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
+        # push!(monc,temp(q[1]=>q[3],q[2]=>q[4],q[3]=>q[1],q[4]=>q[2]))
+    end
+    r=length(mon)
+    # if coelimit!=false
+    #     A = 2 .* rand(rng,r, r) .- 1  # 生成范围在-1到1的随机矩阵
+    #     A_symmetric = (A + A') / 2
+    # else
+    #     A_symmetric=Symmetric(rand(rng,r,r))
+    # end
+    A_symmetric = sparse_symmetric_pm1(rng, r; density=0.05, zero_diag=true)
     #return transpose(monc)*A_symmetric*mon
     #new
     f = transpose(monc)*A_symmetric*mon
@@ -509,26 +557,63 @@ function sparse_hermitian_int_quat(rng, t, density=0.2, bound=10, zero_diag=fals
     Q_tri = sparse(I, J, V, t, t)
     # 补全为 Hermitian：下三角 = adjoint(上三角)
     Q = Q_tri + adjoint(Q_tri) - Diagonal(diag(Q_tri))
-    for i = 1:7
-        Q[i,i]= quat(0,0,0,0)
-    end
-    Q[1,6] = 0
-    Q[6,1] = 0
-    Q[2,4] = quat(1,1,0,0)
-    Q[4,2] = quat(1,-1,0,0)
-    Q[2,6] = quat(1,0,0,0)
-    Q[6,2] = quat(1,0,0,0)
-    Q[5,7] = quat(1,0,0,0)
-    Q[7,5] = quat(1,0,0,0)
-    # Q[2,4] = 0
-    # Q[4,2] = 0
-    # Q[2,6] = 0
-    # Q[6,2] = 0
-    # Q[5,7] = 0
-    # Q[7,5] = 0
-    # 减去重复的对角线
+    # for i = 1:7
+    #     Q[i,i]= quat(0,0,0,0)
+    # end
+    # Q[1,6] = 0
+    # Q[6,1] = 0
+    # Q[2,4] = quat(1,1,0,0)
+    # Q[4,2] = quat(1,-1,0,0)
+    # Q[2,6] = quat(1,0,0,0)
+    # Q[6,2] = quat(1,0,0,0)
+    # Q[5,7] = quat(1,0,0,0)
+    # Q[7,5] = quat(1,0,0,0)
+    # # Q[2,4] = 0
+    # # Q[4,2] = 0
+    # # Q[2,6] = 0
+    # # Q[6,2] = 0
+    # # Q[5,7] = 0
+    # # Q[7,5] = 0
+    # # 减去重复的对角线
     return Q
 end
+
+function sparse_symmetric_pm1(rng, t; density=0.2, zero_diag=false)
+    I = Int[]
+    J = Int[]
+    V = Int[]
+
+    for i in 1:t
+
+        # 对角线
+        if !zero_diag
+            v = rand(rng, (-1, 1))
+            push!(I, i)
+            push!(J, i)
+            push!(V, v)
+        end
+
+        # 上三角
+        for j in i+1:t
+            if rand(rng) < density
+                v = rand(rng, (-1, 1))
+
+                # (i,j)
+                push!(I, i)
+                push!(J, j)
+                push!(V, v)
+
+                # (j,i)
+                push!(I, j)
+                push!(J, i)
+                push!(V, v)
+            end
+        end
+    end
+
+    return sparse(I, J, V, t, t)
+end
+
 function rand_hermitian_int_quat(rng, t, bound=10)
     Q = zeros(Quaternion{Int}, t, t)
     for i in 1:t
@@ -593,8 +678,8 @@ function ncbfind(A, l, a)
     return nothing
 end
 
-function star(a::Vector{Vector{UInt16}},n)
-    # a = deepcopy(b)
+function star(b::Vector{Vector{UInt16}},n)
+    a = deepcopy(b)
     if length(a[3])==0
         return a
     else
@@ -887,23 +972,86 @@ Rule:
 #         return m1
 #     end
 # end
+# println(standardterm(Vector{UInt16}[[], [], [0x0004, 0x0005, 0x0003, 0x0001]],n))
+# function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
+
+#     #keep scalar parts normalized
+#     r = sort(deepcopy(m[1]))
+#     im = sort(deepcopy(m[2]))
+
+#     # DO NOT SORT quaternion order
+#     v = deepcopy(m[3])
+
+#     # empty monomial
+#     if isempty(v)
+#         return [r, im, v]
+#     end
+
+#     ########################################
+#     # Step 1: cyclic canonicalization
+#     ########################################
+
+#     rotations = Vector{Vector{UInt16}}()
+
+#     d = length(v)
+
+#     for k in 0:d-1
+#         rot = vcat(v[k+1:end], v[1:k])
+#         push!(rotations, rot)
+#     end
+
+#     # lexicographically minimal rotation
+#     v_cyclic = minimum(rotations)
+#     # println(v_cyclic)
+
+#     m1 = standardterm([r, im, v_cyclic],n)
+
+#     # println(m1)
+    
+
+#     ########################################
+#     # Step 2: conjugate canonicalization
+#     ########################################
+
+#     # star() should reverse order correctly
+#     # m2 = star(deepcopy(m1), n)
+#     # # println(m2)
+
+#     ########################################
+#     # Step 3: choose lexicographically smaller
+#     ########################################
+
+#     # if m2[3] < m1[3]
+#     #     return m2
+#     # else
+#     #     return m1
+#     # end
+#     return m1
+# end
 function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
 
-    #keep scalar parts normalized
-    r = sort(deepcopy(m[1]))
+    # scalar parts
+    r  = sort(deepcopy(m[1]))
     im = sort(deepcopy(m[2]))
 
-    # DO NOT SORT quaternion order
     v = deepcopy(m[3])
 
-    # empty monomial
     if isempty(v)
         return [r, im, v]
     end
+    if v[1] == v[end] + UInt16(n)
+        push!(r,v[end])
+        push!(im,v[1])
+        v = v[2:end-1]
+    elseif v[1] == v[end] - UInt16(n)
+        push!(im,v[end])
+        push!(r,v[1])
+        v = v[2:end-1]
+    end
 
-    ########################################
-    # Step 1: cyclic canonicalization
-    ########################################
+    ################################################
+    # Step 1: cyclic canonicalization of full word
+    ################################################
 
     rotations = Vector{Vector{UInt16}}()
 
@@ -914,32 +1062,51 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
         push!(rotations, rot)
     end
 
-    # lexicographically minimal rotation
     v_cyclic = minimum(rotations)
-
-    m1 = standardterm([r, im, v_cyclic],n)
-    # println(m1)
-
-    ########################################
-    # Step 2: conjugate canonicalization
-    ########################################
-
-    # star() should reverse order correctly
-    # m2 = star(deepcopy(m1), n)
-    # # println(m2)
-
-    ########################################
-    # Step 3: choose lexicographically smaller
-    ########################################
-
-    # if m2[3] < m1[3]
-    #     return m2
-    # else
-    #     return m1
+    # if v_cyclic[1] == v_cyclic[end] + UInt16(n)
+    #     push!(r,v_cyclic[end])
+    #     push!(im,v_cyclic[1])
+    #     v_cyclic = v_cyclic[2:end-1]
+    # elseif v_cyclic[1] == v_cyclic[end] - UInt16(n)
+    #     push!(im,v_cyclic[end])
+    #     push!(r,v_cyclic[1])
+    #     v_cyclic = v_cyclic[2:end-1]
     # end
-    return m1
-    # return m
+    ################################################
+    # Step 2: standardterm
+    ################################################
+
+    m1 = standardterm([r, im, v_cyclic], n)
+
+    ################################################
+    # Step 3: canonicalize remaining nc-part again
+    ################################################
+
+    v2 = m1[3]
+
+    if !isempty(v2)
+
+        rotations2 = Vector{Vector{UInt16}}()
+
+        d2 = length(v2)
+
+        for k in 0:d2-1
+            rot2 = vcat(v2[k+1:end], v2[1:k])
+            push!(rotations2, rot2)
+        end
+
+        v2 = minimum(rotations2)
+    end
+
+    ################################################
+    # Final standard form
+    ################################################
+
+    return standardterm([m1[1], m1[2], v2],n)
+    # return m1
 end
+println(canonical_qmono(Vector{UInt16}[[], [], [0x0002, 0x0002, 0x0003, 0x0004]], 2))
+# println(canonical_qmono(Vector{UInt16}[[], [], [0x0001, 0x0003, 0x0002, 0x0004]], 3))
 function skew_entry(X,t,r,bs)
 
     if t < r
