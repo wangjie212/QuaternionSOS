@@ -1105,7 +1105,7 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     return standardterm([m1[1], m1[2], v2],n)
     # return m1
 end
-println(canonical_qmono(Vector{UInt16}[[], [], [0x0002, 0x0002, 0x0003, 0x0004]], 2))
+# println(canonical_qmono(Vector{UInt16}[[], [], [0x0002, 0x0002, 0x0003, 0x0004]], 2))
 # println(canonical_qmono(Vector{UInt16}[[], [], [0x0001, 0x0003, 0x0002, 0x0004]], 3))
 function skew_entry(X,t,r,bs)
 
