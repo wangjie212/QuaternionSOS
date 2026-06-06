@@ -98,7 +98,7 @@ println(ans1)
 println(ans2)
 
 ### set: f = [q]_1^*Q[q]_1, Q:quaternion, n=10,20,30,40；
-rng = Xoshiro(1)
+rng = Xoshiro(2)
 n = 3
 @ncpolyvar q[1:2n]
 f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, rng; conjugates=false)
@@ -118,7 +118,9 @@ end
 @time opt = qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 # @time opt = qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 # @time opt = qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=true, solution = false, QUIET=true)
-@time opt = qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
+@time opt = qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
+@time opt = qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, addcons=true, solution = false, QUIET=true)
+
 # @time opt = qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=true, solution = false, QUIET=true)
 
 # RSOS:d =1
@@ -186,7 +188,7 @@ println(ans2)
 ###set: f = [q,\bar(q)]_1^*Q[q,\bar(q)]_1, Q:real, n=20,40,60
 
 rng = Xoshiro(1)
-n = 2
+n = 4
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, rng, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -206,6 +208,8 @@ end
 @time qs_tssos_first([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
 @time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
 @time qs_tssos_first([[f, g];comm_constraints], q, n, 1,numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, QUIET=true)
+@time qs_tssos_first([[f, g];comm_constraints], q, n, 1,numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true)
+
 # RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
 @time opt,sol,data = tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
@@ -245,10 +249,13 @@ for N = 1:100
     end
     # @time opt1 =qs_tssos_first([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
     @time opt1 =qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
+    @time opt3 =qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true) 
     # @time opt2 = qs_tssos_first([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
     @time opt2 = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+    @time opt4 = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true)
     # @time opt3 =qs_tssos_first([f], q, n, 2,  nb=n,fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
     push!(ans1, opt1, opt2)
+    push!(ans2, opt3, opt4)
 end
 for kk = 1:length(ans1)
     if abs(ans1[kk]-ans2[kk]) > 1e-4
@@ -263,7 +270,7 @@ println(ans2)
 
 
 ### set Q:quaternion
-rng = Xoshiro(2)
+rng = Xoshiro(1)
 n = 3
 @ncpolyvar q[1:2n]
 f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, rng; conjugates=true)
@@ -282,6 +289,7 @@ end
 
 # QSOS: basis[q,\bar(q)]_1
 @time qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq = length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
+@time qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq = length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, addcons=true, QUIET=true) 
 @time qs_tssos_first([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
 # RSOS: d=1
 pop,x = quaternion_to_real([fr, g], q)
@@ -292,8 +300,11 @@ pop,x = quaternion_to_real([fr, g], q)
 @time opt = qs_tssos_first([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
 
 # @time opt = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
-@time opt = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
-@time opt = qs_tssos_first([f;comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+@time opt = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+@time opt = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, addcons=true, QUIET=true)
+# @time opt = qs_tssos_first([f;comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+@time opt = qs_tssos_first([f;comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, addcons=true,QUIET=true)
+
 pop,x = quaternion_to_real([fr;gn], q)
 @time opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
 @time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
@@ -302,9 +313,9 @@ println(ub)
 
 ans1 = []
 ans2 = []
-for N = 1:20
+for N = 21:121
     rng = Xoshiro(N)
-    n = 3
+    n = 5
     @ncpolyvar q[1:2n]
     f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, rng; conjugates=true)
     g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -320,13 +331,13 @@ for N = 1:20
     end
     # @time opt1 =qs_tssos_first([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
     @time opt1 =qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
-    pop,x = quaternion_to_real([fr,g], q)
-    @time opt3,sol,data = tssos_first(pop, x, 1,TS=false, solution=true, QUIET=true)
-    # @time opt2 = qs_tssos_first([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+    @time opt3 =qs_tssos_first([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, addcons=true,QUIET=true) 
+    # pop,x = quaternion_to_real([fr,g], q)
+    # @time opt3,sol,data = tssos_first(pop, x, 1,TS=false, solution=true, QUIET=true)
     @time opt2 = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
-    pop,x = quaternion_to_real([fr;gn], q)
-    @time opt4,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
-    # @time opt3 = qs_tssos_first([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+    @time opt4 = qs_tssos_first([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, addcons=true,QUIET=true)
+    # pop,x = quaternion_to_real([fr;gn], q)
+    # @time opt4,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
     push!(ans1, opt1, opt2)
     push!(ans2, opt3, opt4)
 end
@@ -349,7 +360,7 @@ println(ans2)
 ###set: f = [q]_2^*Q[q]_2, Q:real, n=1,2,3,4,5,6；
 
 rng = Xoshiro(1)
-n = 2
+n = 4
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=false, coelimit=true)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -400,9 +411,9 @@ println(ub)
 
 ans1 = []
 ans2 = []
-for N = 11:20
+for N = 1:100
     rng = Xoshiro(N)
-    n = 3
+    n = 4
     @ncpolyvar q[1:2n]
     f,Fsupp,Fcoe = randomsymfunc(q, n, 2, rng, conjugates=false, coelimit=true)
     g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -416,12 +427,12 @@ for N = 11:20
             end
         end
     end
-    @time opt1 =qs_tssos_first([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
-    # @time opt1 =qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
-    @time opt2 = qs_tssos_first([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
-    # @time opt2 = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints),fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
-    # @time opt3 = qs_tssos_first([f], q, n, 2, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
-    push!(ans2, opt1,opt2)
+    @time opt1 =qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
+    @time opt3 =qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints),  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true) 
+    @time opt2 = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints),fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+    @time opt4 = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints),fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true)
+    push!(ans1, opt1,opt2)
+    push!(ans2, opt3,opt4)
 end
 for kk = 1:length(ans1)
     if abs(ans1[kk]-ans2[kk]) > 1e-4
@@ -435,7 +446,7 @@ println(ans1)
 println(ans2)
 
 ### set Q:quaternion
-rng = Xoshiro(8)
+rng = Xoshiro(1)
 n = 3
 @ncpolyvar q[1:2n]
 f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 2, rng; conjugates=false)
@@ -462,16 +473,15 @@ end
 #QSOS: full basis [q,\bar(q)]_2
 @time qs_tssos_first([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
 @time qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq = length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
+@time qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq = length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, addcons=true, QUIET=true) 
 
 pop,x = quaternion_to_real([fr, g], q)
 @time tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
 
 ## unit norm
 # @time qs_tssos_first([f], q, n, 2, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, QUIET=true)
-@time qs_tssos_first([f;comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=false, QUIET=true)
-@time qs_tssos_first([f;comm_constraints], q, n, 3, numeq=length(comm_constraints), rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, normality = 1,conjubasis=false, QUIET=true)
-@time qs_tssos_first([f;gn], q, n, 2, numeq=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 @time qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
+@time qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, addcons=true,QUIET=true)
 @time qs_tssos_first([f;comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq= length(comm_constraints), nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([fr; gn], q)
 @time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
@@ -480,9 +490,9 @@ println(ub)
 
 ans1 = []
 ans2 = []
-for N = 10:20
+for N = 1:40
     rng = Xoshiro(N)
-    n = 3
+    n = 4
     @ncpolyvar q[1:2n]
     f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 2, rng; conjugates=false)
     g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -498,11 +508,13 @@ for N = 10:20
     end
     # @time opt1 =qs_tssos_first([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
     @time opt1= qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq = length(comm_constraints), rncnumeq= length(comm_constraints),fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, QUIET=true) 
-    pop,x = quaternion_to_real([fr,g], q)
-    @time opt3,sol,data = tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
+    @time opt3= qs_tssos_first([[f, g];comm_constraints], q, n, 2, numeq = length(comm_constraints), rncnumeq= length(comm_constraints),fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=true, conjubasis=true, addcons=true, QUIET=true) 
+    # pop,x = quaternion_to_real([fr,g], q)
+    # @time opt3,sol,data = tssos_first(pop, x, 2, TS=false, solution=true, QUIET=true)
     @time opt2 = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
-    pop,x = quaternion_to_real([fr; gn], q)
-    @time opt4,sol,data =tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
+    @time opt4 = qs_tssos_first([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, addcons=true, QUIET=true)
+    # pop,x = quaternion_to_real([fr; gn], q)
+    # @time opt4,sol,data =tssos_first(pop, x, 2, numeq=n, TS=false, solution=true, QUIET=true)
     # @time opt3 = qs_tssos_first([f], q, n, 2, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=true, conjubasis=true, QUIET=true)
     push!(ans1, opt1,opt2)
     push!(ans2, opt3,opt4)

@@ -57,6 +57,9 @@ end =#
 function qtermadd3(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},n)
     return standardterm([append!(a[1],b[1],star(c,n)[1]),append!(a[2],b[2],star(c,n)[2]),append!(a[3],b[3],star(c,n)[3])],n)
 end
+function qtermadd4(a::Vector{Vector{UInt16}},b::Vector{Vector{UInt16}},c::Vector{Vector{UInt16}},d::Vector{Vector{UInt16}},n)
+    return standardterm([append!(a[1],b[1],c[1],d[1]),append!(a[2],b[2],c[2],d[2]),append!(a[3],b[3],c[3],d[3])],n)
+end
 
 function qtermadd3left(a1::Vector{Vector{UInt16}},b1::Vector{Vector{UInt16}},c1::Vector{Vector{UInt16}},n)
     a = deepcopy(a1)
@@ -103,6 +106,9 @@ function qcyclic_canon(supp, coe, n; type=QuaternionF64)
 end
 
 function mono_to_term(m, q, n)
+    # if m == 1
+    #     return standardterm([UInt16[], UInt16[], UInt16[]], n)
+    # end
     varmap = Dict(q[i] => UInt16(i) for i in 1:length(q))
     t = [UInt16[], UInt16[], UInt16[]]
     for (v, z) in zip(m.vars, m.z)
@@ -1122,4 +1128,55 @@ function skew_entry(X,t,r,bs)
     end
 end
 
-# println(canonical_qmono(Vector{UInt16}[[], [], [0x0004, 0x0003]], 2))
+
+function generate_comm_constraints(n)
+
+    Qi = QuaternionF64(0,1,0,0)
+    Qj = QuaternionF64(0,0,1,0)
+    Qk = QuaternionF64(0,0,0,1)
+
+    pop_num = n*(n-1)
+
+    supp = Vector{Vector{Vector{Vector{Vector{UInt16}}}}}(undef,pop_num)
+    coe  = Vector{Vector{QuaternionF64}}(undef,3)
+
+    cnt = 1
+
+    for i in 1:n
+        for j in 1:n
+
+            i == j && continue
+
+            supp[cnt] = [
+
+                # -q_i * i * q_j
+                # [mono_to_term(q[i],q,n),mono_to_term(q[j],q,n)],
+                [[UInt16[], UInt16[], [UInt16(i)]],[UInt16[], UInt16[], [UInt16(j)]]],
+
+                # +i * conj(q_i) * q_j
+                # [mono_to_term(1,q,n),mono_to_term(q[i+n]*q[j],q,n)],
+                [[UInt16[], UInt16[], UInt16[]],[UInt16[], UInt16[], [UInt16(i+n), UInt16(j)]]],
+
+                # +q_j*q_i*i
+                # [mono_to_term(q[j]*q[i],q,n), mono_to_term(1,q,n)],
+                [[UInt16[], UInt16[], [UInt16(j), UInt16(i)]],[UInt16[], UInt16[], UInt16[]]],
+
+                # -q_j*i*conj(q_i)
+                # [mono_to_term(q[j],q,n), mono_to_term(q[i+n],q,n)]
+                [[UInt16[], UInt16[], [UInt16(j)]],[UInt16[], UInt16[], [UInt16(i+n)]]]
+            ]
+            # supp[cnt][1] = [[UInt16[], UInt16[], [UInt16(i)]],[UInt16[], UInt16[], [UInt16(j)]]]
+            # supp[cnt][2] = [[UInt16[], UInt16[], UInt16[]],[UInt16[], UInt16[], [UInt16(i+n), UInt16(j)]]]
+            # supp[cnt][3] = [[UInt16[], UInt16[], [UInt16(j), UInt16(i)]],[UInt16[], UInt16[], UInt16[]]]
+            # supp[cnt][4] = [[UInt16[], UInt16[], [UInt16(j)]],[UInt16[], UInt16[], [UInt16(i+n)]]]
+            cnt += 1
+
+        end
+    end
+    coe[1] = QuaternionF64[-Qi,Qi,Qi,-Qi]
+    coe[2] = QuaternionF64[-Qj,Qj,Qj,-Qj]
+    coe[3] = QuaternionF64[-Qk,Qk,Qk,-Qk]
+    return supp, coe
+
+end
+
