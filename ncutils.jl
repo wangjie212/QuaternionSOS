@@ -88,7 +88,7 @@ function qcyclic_canon(supp, coe, n; type=QuaternionF64)
     return nsupp,ncoe
 end
 
-function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
+function randomsymfunc(q,n,d;conjugates=false,coelimit=false)
     mon = NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -105,10 +105,10 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     end
     n=length(mon)
     if coelimit!=false
-        A = 2 .* rand(rng,n, n) .- 1  # 生成范围在-1到1的随机矩阵
+        A = 2 .* rand(n, n) .- 1  # 生成范围在-1到1的随机矩阵
         A_symmetric = (A + A') / 2
     else
-        A_symmetric=Symmetric(rand(rng,n,n))
+        A_symmetric=Symmetric(rand(n,n))
     end
     return transpose(monc)*A_symmetric*mon
 end

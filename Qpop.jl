@@ -4,7 +4,7 @@ const NCMono = DP.Monomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}
 
 function qs_tssos_first(pop, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
     merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, solution=false, ipart=true, 
-    dualize=false, balanced=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
+    dualize=false, balanced=false,
     writetofile=false, normality=0, NormalSparse=false, conjubasis=true)
     supp,coe = QPolys_info(pop, z, n)
     println("*********************************** QSSOS ***********************************")
@@ -146,7 +146,7 @@ function qs_tssos_first(pop, z, n::Int, d; numeq=0, RemSig=false, nb=0,CS="MF",c
     blocks,eblocks,cl,blocksize = get_blocks(n,rlorder, I, J, supp, cliques, cliquesize, cql, tsupp, basis, ebasis, TS=TS, ConjugateBasis=conjubasis, normality=normality, merge=merge, md=md, nb=nb)
     # println(blocksize)
     opt,ksupp,SDP_status = qsolvesdp(n, m, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-    nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
+    nb=nb, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
     return opt
 end
 end
@@ -202,7 +202,7 @@ function QPolys_info(pop, z, n)
 end
 function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize; 
     numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", solve=true, dualize=false, solution=false, ipart=true, 
-    cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false)
+    writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false)
     tsupp = Vector{Vector{UInt16}}[]
     for i = 1:cql
         # a = normality >= rlorder[i] ? cliquesize[i] + 1 : 1
@@ -260,23 +260,24 @@ function qsolvesdp(n, m, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, 
         if QUIET == false
             println("Assembling the SDP...")
         end
-        if solver == "Mosek"
-            if dualize == false
-                model = Model(optimizer_with_attributes(Mosek.Optimizer, "MSK_DPAR_INTPNT_CO_TOL_PFEAS" => mosek_setting.tol_pfeas, "MSK_DPAR_INTPNT_CO_TOL_DFEAS" => mosek_setting.tol_dfeas, 
-                "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => mosek_setting.tol_relgap, "MSK_DPAR_OPTIMIZER_MAX_TIME" => mosek_setting.time_limit, "MSK_IPAR_NUM_THREADS" => mosek_setting.num_threads))
-            else
-                model = Model(dual_optimizer(Mosek.Optimizer))
-            end
-        elseif solver == "COSMO"
-            model = Model(optimizer_with_attributes(COSMO.Optimizer, "eps_abs" => cosmo_setting.eps_abs, "eps_rel" => cosmo_setting.eps_rel, "max_iter" => cosmo_setting.max_iter, "time_limit" => cosmo_setting.time_limit))
-        elseif solver == "SDPT3"
-            model = Model(optimizer_with_attributes(SDPT3.Optimizer))
-        elseif solver == "SDPNAL"
-            model = Model(optimizer_with_attributes(SDPNAL.Optimizer))
-        else
-            @error "The solver is currently not supported!"
-            return nothing,nothing,nothing,nothing,nothing
-        end
+        # if solver == "Mosek"
+            # if dualize == false
+            model = Model(Mosek.Optimizer)
+            #     model = Model(optimizer_with_attributes(Mosek.Optimizer, "MSK_DPAR_INTPNT_CO_TOL_PFEAS" => mosek_setting.tol_pfeas, "MSK_DPAR_INTPNT_CO_TOL_DFEAS" => mosek_setting.tol_dfeas, 
+            #     "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => mosek_setting.tol_relgap, "MSK_DPAR_OPTIMIZER_MAX_TIME" => mosek_setting.time_limit, "MSK_IPAR_NUM_THREADS" => mosek_setting.num_threads))
+            # else
+                # model = Model(dual_optimizer(Mosek.Optimizer))
+            # end
+        # elseif solver == "COSMO"
+        #     model = Model(optimizer_with_attributes(COSMO.Optimizer, "eps_abs" => cosmo_setting.eps_abs, "eps_rel" => cosmo_setting.eps_rel, "max_iter" => cosmo_setting.max_iter, "time_limit" => cosmo_setting.time_limit))
+        # elseif solver == "SDPT3"
+        #     model = Model(optimizer_with_attributes(SDPT3.Optimizer))
+        # elseif solver == "SDPNAL"
+        #     model = Model(optimizer_with_attributes(SDPNAL.Optimizer))
+        # else
+        #     @error "The solver is currently not supported!"
+        #     return nothing,nothing,nothing,nothing,nothing
+        # end
         set_optimizer_attribute(model, MOI.Silent(), QUIET)
         time = @elapsed begin
         rcons = [AffExpr(0) for i=1:ltsupp]

@@ -6,35 +6,37 @@ using Quaternions
 using MosekTools
 using JuMP
 using LinearAlgebra
-using MultivariatePolynomials
-import MultivariatePolynomials as MP
+# using MultivariatePolynomials
+# import MultivariatePolynomials as MP
 import DynamicPolynomials as DP
 import CliqueTrees
 
-# include("D:/Programs/QuaternionSOS/ncutils.jl")
-# include("D:/Programs/QuaternionSOS/Qpop.jl")
-include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/ncutils.jl")
-include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/Qpop.jl")
+include("D:/Programs/QuaternionSOS/ncutils.jl")
+include("D:/Programs/QuaternionSOS/Qpop.jl")
+# include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/ncutils.jl")
+# include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/Qpop.jl")
 
 # Test 1
 ## n = 20 seed = 4,2,3; n = 40 seed = 1,2,3; n = 60 seed = 11,12,13
-rng = Xoshiro(11)
-n = 20
+# rng = Xoshiro(8)
+n = 2
 @ncpolyvar q[1:2n]
-f = randomsymfunc(q, n, 1, rng, conjugates=false, coelimit=false)
+f = randomsymfunc(q, n, 1, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
-gn = [1 - q[i]*q[i+n] for i = 1:n]
+# gn = [1 - q[i]*q[i+n] for i = 1:n]
 
 ## ball
-@time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false,conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([f, g], q)
-@time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
+# @time qs_tssos_first([f, g], q, n, 1, TS=false, ipart=false,conjubasis=false, QUIET=true)
+# pop,x = quaternion_to_real([f, g], q)
+# @time tssos_first(pop, x, 1, TS=false, solution=true, QUIET=true)
 
 
 ## unit norm
-@time qs_tssos_first([f], q, n, 1, nb=n, TS=false, ipart=false, conjubasis=false, QUIET=true)
-pop,x = quaternion_to_real([f;gn], q)
-@time tssos_first(pop, x, 1, numeq=n, TS=false, solution=true, QUIET=true)
+@time qs_tssos_first([f, g], q, n, 2, numeq=1, TS=false, ipart=false, conjubasis=true, QUIET=true)
+pop,x = quaternion_to_real([f, g], q)
+opt,sol,data = tssos(pop, x, 1, numeq=1, TS=false, solve=true, QUIET=true)
+ub = local_solution([data.obj; data.eq_cons], data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
+println(ub)
 
 
 # Test 2
