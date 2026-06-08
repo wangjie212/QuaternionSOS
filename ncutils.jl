@@ -1,14 +1,14 @@
-function standardterm(b::Vector{Vector{UInt16}},n)
-    a =deepcopy(b)
-    if length(a[3])<=1
-        a[1]=sort(a[1])
-        a[2]=sort(a[2])
+function standardterm(b::Vector{Vector{UInt16}}, n)
+    a = deepcopy(b)
+    if length(a[3]) <= 1
+        a[1] = sort(a[1])
+        a[2] = sort(a[2])
         return a
     else
-        Ind=[]
-        i=1
+        Ind = []
+        i = 1
         while i >= 1
-            if a[3][i]==a[3][i+1]-UInt16(n)||a[3][i]==a[3][i+1]+UInt16(n)
+            if a[3][i] == a[3][i+1] - UInt16(n) || a[3][i] == a[3][i+1] + UInt16(n)
                 push!(a[1],a[3][i]<a[3][i+1] ? a[3][i] : a[3][i+1])
                 push!(a[2],a[3][i]<a[3][i+1] ? a[3][i+1] : a[3][i])
                 # push!(Ind,i,i+1)
@@ -118,7 +118,7 @@ function mono_to_term(m, q, n)
     return standardterm(t, n)
 end
 
-function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
+function randomsymfunc(q,n,d;conjugates=false,coelimit=false)
     mon = NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -135,10 +135,10 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
     end
     r=length(mon)
     if coelimit!=false
-        A = 2 .* rand(rng,r, r) .- 1  # 生成范围在-1到1的随机矩阵
+        A = 2 .* rand(r, r) .- 1  # 生成范围在-1到1的随机矩阵
         A_symmetric = (A + A') / 2
     else
-        A_symmetric=Symmetric(rand(rng,r,r))
+        A_symmetric=Symmetric(rand(r,r))
     end
     #return transpose(monc)*A_symmetric*mon
     #new
@@ -162,7 +162,7 @@ function randomsymfunc(q,n,d,rng;conjugates=false,coelimit=false)
 
     return f, fsupp, fcoe
 end
-function randomsymfunc2(q,n,d,rng;conjugates=false,coelimit=false)
+function randomsymfunc2(q,n,d;conjugates=false,coelimit=false)
     mon = NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -179,12 +179,12 @@ function randomsymfunc2(q,n,d,rng;conjugates=false,coelimit=false)
     end
     r=length(mon)
     # if coelimit!=false
-    #     A = 2 .* rand(rng,r, r) .- 1  # 生成范围在-1到1的随机矩阵
+    #     A = 2 .* rand(r, r) .- 1  # 生成范围在-1到1的随机矩阵
     #     A_symmetric = (A + A') / 2
     # else
-    #     A_symmetric=Symmetric(rand(rng,r,r))
+    #     A_symmetric=Symmetric(rand(r,r))
     # end
-    A_symmetric = sparse_symmetric_pm1(rng, r; density=0.05, zero_diag=true)
+    A_symmetric = sparse_symmetric_pm1(r, density=0.05, zero_diag=true)
     #return transpose(monc)*A_symmetric*mon
     #new
     f = transpose(monc)*A_symmetric*mon
@@ -208,7 +208,7 @@ function randomsymfunc2(q,n,d,rng;conjugates=false,coelimit=false)
     return f, fsupp, fcoe
 end
 
-function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false)
+function cliques_randomsymfunc(q,n,cn,size,d;conjugates=false,coelimit=false)
     f = 0*q[1]^0
     g = DynamicPolynomials.Polynomial{DynamicPolynomials.NonCommutative{DynamicPolynomials.CreationOrder}, Graded{LexOrder}, Int64}[]
     # s = max(1, (n - size) ÷ (cn - 1)) 
@@ -231,10 +231,10 @@ function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false
         end
         n_mon=length(mon)
         if coelimit!=false
-            A = 2 .* rand(rng,n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
+            A = 2 .* rand(n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
             A_symmetric = (A + A') / 2
         else
-            A_symmetric=Symmetric(rand(rng,n_mon, n_mon))
+            A_symmetric=Symmetric(rand(n_mon, n_mon))
         end
         f = f + transpose(monc)*A_symmetric*mon
         # push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
@@ -254,10 +254,9 @@ function cliques_randomsymfunc(q,n,cn,size,d,rng;conjugates=false,coelimit=false
     return f,g,fsupp,fcoe
 end
 
-
 using SparseArrays
 
-function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
+function sparserandomsymfunc(q,n,d,sparsity;conjugates=false,coelimit=false)
     mon=NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -274,16 +273,16 @@ function sparserandomsymfunc(q,n,d,rng,sparsity;conjugates=false,coelimit=false)
     end
     n=length(mon)
     if coelimit!=false
-        A = 2 .* rand(rng,n, n) .- 1  # 生成范围在-1到1的随机矩阵
+        A = 2 .* rand(n, n) .- 1  # 生成范围在-1到1的随机矩阵
         A_symmetric = (A + A') / 2
     else
-        A_symmetric=Symmetric(rand(rng,n,n))
+        A_symmetric=Symmetric(rand(n,n))
     end
-    B = sparse_symmetric_binary_matrix(n,sparsity,rng)
+    B = sparse_symmetric_binary_matrix(n,sparsity)
     return transpose(monc)*(A_symmetric.*B)*mon
 end
 
-function cliques_sparserandomsymfunc(q,n,cn,size,d,rng,sparsity;conjugates=false,coelimit=false)
+function cliques_sparserandomsymfunc(q,n,cn,size,d,sparsity;conjugates=false,coelimit=false)
     f = 0*q[1]^0
     g = DynamicPolynomials.Polynomial{DynamicPolynomials.NonCommutative{DynamicPolynomials.CreationOrder}, Graded{LexOrder}, Int64}[]
     s = max(1, (n - size) ÷ (cn - 1)) 
@@ -303,12 +302,12 @@ function cliques_sparserandomsymfunc(q,n,cn,size,d,rng,sparsity;conjugates=false
         end
         n_mon=length(mon)
         if coelimit!=false
-            A = 2 .* rand(rng,n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
+            A = 2 .* rand(n_mon, n_mon) .- 1  # 生成范围在-1到1的随机矩阵
             A_symmetric = (A + A') / 2
         else
-            A_symmetric=Symmetric(rand(rng,n_mon, n_mon))
+            A_symmetric=Symmetric(rand(n_mon, n_mon))
         end
-        B = sparse_symmetric_binary_matrix(n_mon,sparsity,rng)
+        B = sparse_symmetric_binary_matrix(n_mon,sparsity)
         f = f + transpose(monc)*(A_symmetric.*B)*mon
         push!(g,1-sum(q[i]*q[i+n] for i = 1 + (k-1)*s : min(1 + (k-1)*s + size - 1, n)))
     end
@@ -330,22 +329,21 @@ function cliques_sparserandomsymfunc(q,n,cn,size,d,rng,sparsity;conjugates=false
     return f,g,fsupp,fcoe
 end
 
-
-function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
+function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64)
     I = Int[]
     J = Int[]
     
     # 遍历上三角（含对角线）生成索引
     for i in 1:n
         # 处理对角线元素
-        if rand(rng, Float64) < sparsity
+        if rand(1) < sparsity
             push!(I, i)
             push!(J, i)
         end
         
         # 处理上三角非对角元素
         for j in (i+1):n
-            if rand(rng, Float64) < sparsity
+            if rand(1) < sparsity
                 # 添加对称位置索引
                 push!(I, i); push!(J, j)
                 push!(I, j); push!(J, i)
@@ -356,9 +354,8 @@ function sparse_symmetric_binary_matrix(n::Int, sparsity::Float64, rng)
     # 创建稀疏矩阵（自动合并重复项）
     sparse(I, J, 1, n, n) .!= 0  # 转换为布尔型稀疏矩阵
 end
-println(sparse_symmetric_binary_matrix(4,1.0,Xoshiro(1)))
 
-function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
+function qrandomsymfunc(q,n,d;conjugates=false, sparsity = 0.0)
     mon=NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -373,7 +370,7 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
         push!(monc,temp(q[1:n]=>q[n+1:2n],q[n+1:2n]=>q[1:n]))
     end
     t=length(mon)
-    A = rand(rng,QuaternionF64,t,t) 
+    A = rand(QuaternionF64,t,t) 
     A_symmetric = (A + adjoint(A)) / 2
         # 把 mon 转成内部 term
     monterm = [mono_to_term(mon[i], q, n) for i in 1:t]
@@ -401,7 +398,7 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
         end
     end
     if sparsity > 0.0
-        C = sparse_symmetric_binary_matrix(t,sparsity,rng)
+        C = sparse_symmetric_binary_matrix(t,sparsity)
         B = conj.(A_symmetric.*C)
         return transpose(monc)*(A_symmetric.*C)*mon, transpose(mon)*B*monc,fsupp,fcoe
     else
@@ -431,7 +428,8 @@ function qrandomsymfunc(q,n,d,rng;conjugates=false, sparsity = 0.0)
 
     end
 end
-function qrandomsymfunc2(q,n,d,rng,Q;conjugates=false, sparsity = 0.0,given=false)
+
+function qrandomsymfunc2(q,n,d,Q;conjugates=false, sparsity = 0.0,given=false)
     mon=NCMono[1]
     for j=1:d
         if conjugates!=false
@@ -447,10 +445,10 @@ function qrandomsymfunc2(q,n,d,rng,Q;conjugates=false, sparsity = 0.0,given=fals
     end
     t=length(mon)
     if given == false
-        # A = rand(rng,QuaternionF64,t,t) 
+        # A = rand(QuaternionF64,t,t) 
         # A_symmetric = (A + adjoint(A)) / 2
-        # A_symmetric = rand_hermitian_int_quat(rng, t, 10)
-        A_symmetric = sparse_hermitian_int_quat(rng, t, 0.2, 10)
+        # A_symmetric = rand_hermitian_int_quat(t, 10)
+        A_symmetric = sparse_hermitian_int_quat(t, 0.2, 10)
     else
         A_symmetric = Q
     end
@@ -481,7 +479,7 @@ function qrandomsymfunc2(q,n,d,rng,Q;conjugates=false, sparsity = 0.0,given=fals
         end
     end
     if sparsity > 0.0
-        C = sparse_symmetric_binary_matrix(t,sparsity,rng)
+        C = sparse_symmetric_binary_matrix(t,sparsity)
         B = conj.(A_symmetric.*C)
         return transpose(monc)*(A_symmetric.*C)*mon, transpose(mon)*B*monc,fsupp,fcoe
     else
@@ -517,13 +515,12 @@ end
 # 生成稀疏 Hermitian 四元数矩阵，元素为整数四元数。
 
 # 参数:
-# - rng: 随机数生成器
 # - t: 矩阵维度
 # - density: 非零元密度（0~1），实际控制上三角（含对角）的填充率
 # - bound: 整数分量的取值范围（-bound 到 bound）
 # - zero_diag: 是否允许对角线为零（默认 false，对角线至少非零以保持可逆性？可根据需求调整）
 # """
-function sparse_hermitian_int_quat(rng, t, density=0.2, bound=10, zero_diag=false)
+function sparse_hermitian_int_quat(t, density=0.2, bound=10, zero_diag=false)
     # 预分配稀疏矩阵存储（COO 格式）
     I = Int[]
     J = Int[]
@@ -532,24 +529,24 @@ function sparse_hermitian_int_quat(rng, t, density=0.2, bound=10, zero_diag=fals
     for i in 1:t
         # 对角线：至少一个非零（除非 zero_diag=true）
         if zero_diag
-            if rand(rng) < density
-                a = rand(rng, -bound:bound)
+            if rand(1) < density
+                a = rand(-bound:bound)
                 push!(I, i); push!(J, i); push!(V, quat(a, 0, 0, 0))
             end
         else
             # 对角线总是非零（实数整数）
-            a = rand(rng, -bound:bound)
+            a = rand(-bound:bound)
             # 可选：避免全零矩阵，确保至少一个非零
             push!(I, i); push!(J, i); push!(V, quat(a, 0, 0, 0))
         end
         
         # 上三角部分 (i < j)
         for j in i+1:t
-            if rand(rng) < density
-                a = rand(rng, -bound:bound)
-                b = rand(rng, -bound:bound)
-                c = rand(rng, -bound:bound)
-                d = rand(rng, -bound:bound)
+            if rand(1) < density
+                a = rand(-bound:bound)
+                b = rand(-bound:bound)
+                c = rand(-bound:bound)
+                d = rand(-bound:bound)
                 q = quat(a, b, c, d)
                 println(i,j)
                 push!(I, i); push!(J, j); push!(V, q)
@@ -584,7 +581,7 @@ function sparse_hermitian_int_quat(rng, t, density=0.2, bound=10, zero_diag=fals
     return Q
 end
 
-function sparse_symmetric_pm1(rng, t; density=0.2, zero_diag=false)
+function sparse_symmetric_pm1(t; density=0.2, zero_diag=false)
     I = Int[]
     J = Int[]
     V = Int[]
@@ -593,7 +590,7 @@ function sparse_symmetric_pm1(rng, t; density=0.2, zero_diag=false)
 
         # 对角线
         if !zero_diag
-            v = rand(rng, (-1, 1))
+            v = rand((-1, 1))
             push!(I, i)
             push!(J, i)
             push!(V, v)
@@ -601,8 +598,8 @@ function sparse_symmetric_pm1(rng, t; density=0.2, zero_diag=false)
 
         # 上三角
         for j in i+1:t
-            if rand(rng) < density
-                v = rand(rng, (-1, 1))
+            if rand(1) < density
+                v = rand((-1, 1))
 
                 # (i,j)
                 push!(I, i)
@@ -620,19 +617,19 @@ function sparse_symmetric_pm1(rng, t; density=0.2, zero_diag=false)
     return sparse(I, J, V, t, t)
 end
 
-function rand_hermitian_int_quat(rng, t, bound=10)
+function rand_hermitian_int_quat(t, bound=10)
     Q = zeros(Quaternion{Int}, t, t)
     for i in 1:t
         for j in 1:i
             if i == j
                 # 对角线：实数整数
-                Q[i,i] = quat(rand(rng, -bound:bound), 0, 0, 0)
+                Q[i,i] = quat(rand(-bound:bound), 0, 0, 0)
             else
                 # 下三角：随机整数四元数
-                a = rand(rng, -bound:bound)
-                b = rand(rng, -bound:bound)
-                c = rand(rng, -bound:bound)
-                d = rand(rng, -bound:bound)
+                a = rand(-bound:bound)
+                b = rand(-bound:bound)
+                c = rand(-bound:bound)
+                d = rand(-bound:bound)
                 q = quat(a, b, c, d)
                 Q[i,j] = q
                 Q[j,i] = conj(q)   # 共轭填充上三角
@@ -641,7 +638,6 @@ function rand_hermitian_int_quat(rng, t, bound=10)
     end
     return Q
 end
-
 
 function bfind(A, l, a)
     if l == 0
@@ -666,7 +662,6 @@ function bfind(A, l, a)
     end
     return nothing
 end
-
 
 function ncbfind(A, l, a)
     low = 1
@@ -816,6 +811,7 @@ function _get_qncbasis_deg2(n, d; ind=Vector{UInt16}(1:2n), binary=false)
         return [[UInt16[],UInt16[],UInt16[]]]
     end
 end
+
 #generate the standard monomial basis in the sparse form
 function get_qncbasis(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), binary=false,conjubasis=false) where T <: Union{UInt16, Int}
     basis=[[UInt16[],UInt16[],UInt16[]]]
@@ -904,6 +900,7 @@ function _get_qncbasis_deg2(var::Vector{T}, n, d; ind=Vector{UInt16}(1:2n), bina
         return [[UInt16[],UInt16[],UInt16[]]]
     end
 end
+
 function qreduce_unitnorm(b,n; nb=0)
     b = standardterm(b, n)
     a = [UInt16[],UInt16[],copy(b[3])]
@@ -935,105 +932,6 @@ Rule:
 - treat (q_i q_j) ~ (q_j q_i)
 - treat conjugate-reversed forms as identical
 """
-# function canonical_qmono(m::Vector{Vector{UInt16}})
-#     # m = [real, imag, vars]
-
-#     # copy to avoid mutating original
-#     r = copy(m[1])
-#     i = copy(m[2])
-#     v = copy(m[3])
-
-#     # sort real and imag parts (safe)
-#     sort!(r)
-#     sort!(i)
-
-#     # IMPORTANT: canonicalize product part
-#     if length(v) > 1
-#         # for quadratic terms: enforce ordering
-#         # q1 q2 and q2 q1 -> same representation
-#         v = sort(v)
-#     end
-
-#     return [r, i, v]
-# end
-# function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
-
-#     # Step 1: normalize ordering inside real/imag
-#     r = sort(copy(m[1]))
-#     i = sort(copy(m[2]))
-#     v = copy(m[3])
-
-#     # Step 2: canonical permutation form
-#     v = sort(v)
-
-#     m1 = [r, i, v]
-
-#     # Step 3: conjugate version using YOUR star()
-#     m2 = star(deepcopy(m1), n)
-
-#     # Step 4: choose canonical representative
-#     if m2[3] < m1[3]
-#         return m2
-#     else
-#         return m1
-#     end
-# end
-# println(standardterm(Vector{UInt16}[[], [], [0x0004, 0x0005, 0x0003, 0x0001]],n))
-# function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
-
-#     #keep scalar parts normalized
-#     r = sort(deepcopy(m[1]))
-#     im = sort(deepcopy(m[2]))
-
-#     # DO NOT SORT quaternion order
-#     v = deepcopy(m[3])
-
-#     # empty monomial
-#     if isempty(v)
-#         return [r, im, v]
-#     end
-
-#     ########################################
-#     # Step 1: cyclic canonicalization
-#     ########################################
-
-#     rotations = Vector{Vector{UInt16}}()
-
-#     d = length(v)
-
-#     for k in 0:d-1
-#         rot = vcat(v[k+1:end], v[1:k])
-#         push!(rotations, rot)
-#     end
-
-#     # lexicographically minimal rotation
-#     v_cyclic = minimum(rotations)
-#     # println(v_cyclic)
-
-#     m1 = standardterm([r, im, v_cyclic],n)
-
-#     # println(m1)
-    
-
-#     ########################################
-#     # Step 2: conjugate canonicalization
-#     ########################################
-
-#     # star() should reverse order correctly
-#     # m2 = star(deepcopy(m1), n)
-#     # # println(m2)
-
-#     ########################################
-#     # Step 3: choose lexicographically smaller
-#     ########################################
-
-#     # if m2[3] < m1[3]
-#     #     return m2
-#     # else
-#     #     return m1
-#     # end
-#     return m1
-# end
 function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
 
     # scalar parts
@@ -1111,8 +1009,7 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     return standardterm([m1[1], m1[2], v2],n)
     # return m1
 end
-# println(canonical_qmono(Vector{UInt16}[[], [], [0x0002, 0x0002, 0x0003, 0x0004]], 2))
-# println(canonical_qmono(Vector{UInt16}[[], [], [0x0001, 0x0003, 0x0002, 0x0004]], 3))
+
 function skew_entry(X,t,r,bs)
 
     if t < r

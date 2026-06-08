@@ -1,12 +1,10 @@
 const Poly = DP.Polynomial{DP.Commutative{DP.CreationOrder}, Graded{LexOrder}, Float64}
 const NCPoly = DP.Polynomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}, Float64}
 const NCMono = DP.Monomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}}
-using MathOptInterface
-# const MOI = MathOptInterface
 
-function qs_tssos_first(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnumeq=0, qncnumeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
+function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnumeq=0, qncnumeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
     merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, solution=false, ipart=true,
-    dualize=false, balanced=false, cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), 
+    dualize=false, balanced=false, mosek_setting=mosek_para(), 
     writetofile=false, normality=0, NormalSparse=false, conjubasis=true,addcons=false)
     supp,coe = QPolys_info(pop, z, n)
     for i = 1:length(supp)
@@ -183,7 +181,6 @@ function qs_tssos_first(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0,
     if TS != false && QUIET == false
         println("Starting to compute the block structure...")
     end
-    time = @elapsed begin
     blocks,eblocks,cl,blocksize = get_blocks(n,rlorder, I, J, supp, cliques, cliquesize, cql, tsupp, basis, ebasis, TS=TS, ConjugateBasis=conjubasis, normality=normality, merge=merge, md=md, nb=nb)
     if QUIET == false
         mb = maximum(maximum.([maximum.(blocksize[i]) for i = 1:cql]))
@@ -191,17 +188,16 @@ function qs_tssos_first(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0,
     end
     if solution
         opt,ksupp,SDP_status,sol,moment = qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-        nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
+        nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
         return opt,sol,moment
     else
         opt, ksupp, SDP_status =  qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-        nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
+        nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
         return opt
     end
     # opt,ksupp,SDP_status,sol,moment = qsolvesdp(n, m, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-    # nb=nb, cosmo_setting=cosmo_setting, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
+    # nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
     # return opt,sol,moment
-end
 end
 
 function QPolys_info(pop, z, n)
@@ -241,9 +237,10 @@ function QPolys_info(pop, z, n)
     end
     return supp,coe
 end
+
 function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize; 
     numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", solve=true, dualize=false, solution=false, ipart=true, 
-    cosmo_setting=cosmo_para(), mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false,addcons=false)
+    mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false,addcons=false)
     tsupp = Vector{Vector{UInt16}}[]
     ttsupp = Vector{Vector{UInt16}}[]
     checktsupp = Vector{Vector{UInt16}}[]
@@ -518,24 +515,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         if QUIET == false
             println("Assembling the SDP...")
         end
-        # if solver == "Mosek"
-            # if dualize == false
-            model = Model(Mosek.Optimizer)
-            #     model = Model(optimizer_with_attributes(Mosek.Optimizer, "MSK_DPAR_INTPNT_CO_TOL_PFEAS" => mosek_setting.tol_pfeas, "MSK_DPAR_INTPNT_CO_TOL_DFEAS" => mosek_setting.tol_dfeas, 
-            #     "MSK_DPAR_INTPNT_CO_TOL_REL_GAP" => mosek_setting.tol_relgap, "MSK_DPAR_OPTIMIZER_MAX_TIME" => mosek_setting.time_limit, "MSK_IPAR_NUM_THREADS" => mosek_setting.num_threads))
-            # else
-                # model = Model(dual_optimizer(Mosek.Optimizer))
-            # end
-        # elseif solver == "COSMO"
-        #     model = Model(optimizer_with_attributes(COSMO.Optimizer, "eps_abs" => cosmo_setting.eps_abs, "eps_rel" => cosmo_setting.eps_rel, "max_iter" => cosmo_setting.max_iter, "time_limit" => cosmo_setting.time_limit))
-        # elseif solver == "SDPT3"
-        #     model = Model(optimizer_with_attributes(SDPT3.Optimizer))
-        # elseif solver == "SDPNAL"
-        #     model = Model(optimizer_with_attributes(SDPNAL.Optimizer))
-        # else
-        #     @error "The solver is currently not supported!"
-        #     return nothing,nothing,nothing,nothing,nothing
-        # end
+        model = Model(Mosek.Optimizer)
         set_optimizer_attribute(model, MOI.Silent(), QUIET)
         time = @elapsed begin
         # rcons = [AffExpr(0) for i=1:lttsupp]
@@ -1776,7 +1756,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             #     println("q[$i] = $q, 模长 = ", norm(q))
             # end
             # sol = extract_quaternion_solution(moment)
-            # linear_monos = find_all_linear_monomials(tsupp, ltsupp)
+            # linear_monos = find_all_linear_monomials(tsupp)
             # sol = Quaternion{Float64}[]
             # for i in 1:n
             #     idx = bfind(tsupp, ltsupp, [UInt16[], UInt16[], [UInt16(i)]])
@@ -1832,7 +1812,8 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
     end
     # return objv,ksupp,SDP_status,sol,moment
 end
-function find_all_linear_monomials(tsupp, ltsupp)
+
+function find_all_linear_monomials(tsupp)
     linear_monomials = Dict{Int, Int}()  # 变量索引 => tsupp 索引
     # 遍历所有单项式
     for idx in 1:length(tsupp)
@@ -1856,6 +1837,7 @@ function add_clique!(G, nodes)
         add_edge!(G, nodes[i], nodes[j])
     end
 end
+
 function max_cliques(G)
     cliques = convert(Vector{Vector{UInt16}}, maximal_cliques(G))
     sort!.(cliques)
@@ -1863,6 +1845,7 @@ function max_cliques(G)
     cql = length(cliquesize)
     return cliques,cql,cliquesize
 end
+
 function chordal_cliques!(G; method="MF", minimize=false)
     # choose algorithm
     alg = method == "MF" && minimize ? CliqueTrees.MinimalChordal(CliqueTrees.MF())  :
@@ -1892,6 +1875,7 @@ function chordal_cliques!(G; method="MF", minimize=false)
     cql = length(cliquesize)
     return maximal_cliques, cql, cliquesize
 end
+
 function quaternion_to_real(qpop,q)
     n = Int(length(q)/2)
     @polyvar x[1:4n]
@@ -1906,6 +1890,7 @@ function quaternion_to_real(qpop,q)
     end
     return pop,x
 end
+
 function clique_decomp(n, m, dc, supp::Vector{Vector{Vector{Vector{UInt16}}}}; order="min", alg="MF")
     if alg == false
         cliques = [UInt16[i for i=1:n]]
@@ -1956,6 +1941,7 @@ function clique_decomp(n, m, dc, supp::Vector{Vector{Vector{Vector{UInt16}}}}; o
     println("-----------------------------------------------------------------------------")
     return cliques,cql,cliquesize
 end
+
 function get_blocks(m, l, d, tsupp, supp::Vector{Vector{Vector{Vector{UInt16}}}}, basis, ebasis; nb=0, normality=0, nvar=0, TS="block", ConjugateBasis=false, merge=false, md=3)
     # if (ConjugateBasis == false && normality > 0) || (ConjugateBasis == true && normality >= d)
     if normality > 0
@@ -2032,6 +2018,7 @@ function get_blocks(n, rlorder, I, J, supp::Vector{Vector{Vector{Vector{UInt16}}
     end
     return blocks,eblocks,cl,blocksize
 end
+
 # function get_blocks2(n, rlorder, I, J, NJ, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cliquesize, cql, tsupp, basis, ebasis,nebasis; TS="block", ConjugateBasis=false, nb=0, normality=1, merge=false, md=3)
 #     blocks = Vector{Vector{Vector{Vector{Int}}}}(undef, cql)
 #     eblocks = Vector{Vector{Vector{Int}}}(undef, cql)
@@ -2060,6 +2047,7 @@ end
 #     end
 #     return blocks,eblocks,cl,blocksize
 # end
+
 function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
     I = [Int[] for i=1:cql]
     J = [Int[] for i=1:cql]
@@ -2085,6 +2073,7 @@ function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}
     end
     return I,J,ncc
 end
+
 function assign_constraint2(n,m,m1,numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
     I = [Int[] for i=1:cql]
     J = [Int[] for i=1:cql]
@@ -2113,6 +2102,7 @@ function assign_constraint2(n,m,m1,numeq, supp::Vector{Vector{Vector{Vector{UInt
     end
     return I,J,NJ,ncc
 end
+
 function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0, ConjugateBasis=false)
     lb = length(basis)
     G = SimpleGraph(lb)
@@ -2157,6 +2147,7 @@ function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, supp, basis; nb=0, Con
     end
     return G
 end
+
 function get_eblock(tsupp::Vector{Vector{Vector{UInt16}}}, hsupp::Vector{Vector{Vector{UInt16}}}, basis::Vector{Vector{Vector{UInt16}}}; nb=nb)
     ltsupp = length(tsupp)
     eblock = Int[]
@@ -2186,6 +2177,7 @@ function get_eblock(tsupp::Vector{Vector{Vector{UInt16}}}, hsupp::Vector{Vector{
     end
     return eblock
 end
+
 function get_gsupp(rlorder, basis, ebasis, supp, cql, I, J, ncc, blocks, eblocks, cl, blocksize, cliquesize; norm=false, nb=0, ConjugateBasis=false, normality=1)
     if norm == true
         gsupp = Vector{UInt16}[]
@@ -2225,6 +2217,7 @@ function get_gsupp(rlorder, basis, ebasis, supp, cql, I, J, ncc, blocks, eblocks
     end
     return gsupp
 end
+
 function get_qmoment(n,rmeasure, imeasure, jmeasure, kmeasure, tsupp, cql, blocks, cl, blocksize, basis; ipart = true, nb=0)
     ctype = ipart == true ? QuaternionF64 : Float64
     moment = Vector{Vector{Matrix{ctype}}}(undef, cql)
@@ -2276,6 +2269,7 @@ function get_qmoment(n,rmeasure, imeasure, jmeasure, kmeasure, tsupp, cql, block
     end
     return moment
 end
+
 function qmat_to_realmat(Q::Matrix{QuaternionF64})
     n = size(Q, 1)
     A = zeros(Float64, 4n, 4n)
@@ -2339,6 +2333,7 @@ function extract_first_order_quaternion_solution(v::AbstractVector{Float64}, tsu
 
     return qsol
 end
+
 function extract_clique_quaternions(v::Vector{Float64}, clique_vars::Vector{UInt16})
     qsol = QuaternionF64[]
     for (idx, var_idx) in enumerate(clique_vars)
