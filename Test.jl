@@ -40,14 +40,14 @@ end
 @time opt = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, solution = false, QUIET=false)
 #RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true, QUIET=false)
+opt,sol,data = tssos(pop, x, 1, TS=false, solve=true, QUIET=false)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
 ## unit norm
 @time opt = qtssos([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, solution = false , QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
-opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
+opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
 # opt,sol,data = tssos(pop, x, 2, numeq=n, TS=false, solve=false, QUIET=true)
 # upper bound
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
@@ -119,8 +119,8 @@ end
 
 # RSOS:d =1
 pop,x = quaternion_to_real([fr, g], q)
-@time opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true,QUIET=false)
-@time opt,sol,data = tssos_first(pop, x, 2, TS=false, solution=false, QUIET=true)
+@time opt,sol,data = tssos(pop, x, 1, TS=false, solve=true,QUIET=false)
+@time opt,sol,data = tssos(pop, x, 2, TS=false, solution=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -129,7 +129,7 @@ println(ub)
 @time opt= qtssos([f], q, n, 1, nb=n, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 @time opt= qtssos([f;gn], q, n, 2, numeq=n, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 pop,x = quaternion_to_real([fr;gn], q)
-@time opt,sol,data =tssos_first(pop, x, 1, numeq=n, TS=false, solution=false, QUIET=true)
+@time opt,sol,data =tssos(pop, x, 1, numeq=n, TS=false, solution=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -201,7 +201,7 @@ end
 
 # RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-@time opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true, QUIET=true)
+@time opt,sol,data = tssos(pop, x, 1, TS=false, solve=true, QUIET=true)
 # @time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
@@ -237,8 +237,8 @@ for N = 1:100
         end
     end
     # @time opt1 =qtssos([f, g], q, n, 2,  fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
-    @time opt1 =qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
-    @time opt3 =qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true) 
+    @time opt1 = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, QUIET=true) 
+    @time opt3 = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints),rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, CS=false, TS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true) 
     # @time opt2 = qtssos([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
     @time opt2 = qtssos([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
     @time opt4 = qtssos([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, addcons=true,QUIET=true)
@@ -377,7 +377,7 @@ println(f)
 #RSOS
 pop,x = quaternion_to_real([f, g], q)
 # @time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
-@time opt,sol,data = tssos_first(pop, x, 2, TS=false, solve=true, QUIET=true)
+@time opt,sol,data = tssos(pop, x, 2, TS=false, solve=true, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -391,7 +391,7 @@ println(ub)
 @time qtssos([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 @time qtssos([f;comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
-@time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solve=true, QUIET=true)
+@time opt,sol,data = tssos(pop, x, 2, numeq=n, TS=false, solve=true, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -576,7 +576,7 @@ println(length(comm_constraints))
 @time qtssos([f;gs;comm_constraints], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn+length(comm_constraints), rncnumeq= length(comm_constraints), CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
 # RSOS :d=2
 pop,x = quaternion_to_real([f;gs], q)
-@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
+@time opt,sol,data = cs_tssos(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
 ub = local_solution(data.n,data.m,data.supp,data.coe;nb=data.nb,numeq=data.numeq,startpoint=rand(data.n),QUIET=true)[1]
 println(ub)
 
@@ -601,7 +601,7 @@ for N = 2:10
     end
     @time opt1 = qtssos([f;gs;comm_constraints], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn+length(comm_constraints), rncnumeq= length(comm_constraints), CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
     pop,x = quaternion_to_real([f; gs], q)
-    @time opt2,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS="MD", CS="MF", solve=true, solution=true,QUIET=false)
+    @time opt2,sol,data = cs_tssos(pop, x, 2, numeq=cn, TS="MD", CS="MF", solve=true, solution=true,QUIET=false)
     push!(ans1, opt1)
     push!(ans2, opt2)
 end
@@ -777,7 +777,7 @@ for (i,j) in keys(Q)
     fr -= term
 end
 pop,x = quaternion_to_real([fr;gn], q)
-@time opt,sol,data = cs_tssos_first(pop, x, 1, numeq=n, TS=false, CS="MF", solution=false, QUIET=false)
+@time opt,sol,data = cs_tssos(pop, x, 1, numeq=n, TS=false, CS="MF", solution=false, QUIET=false)
 # @time opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false,solution=false, QUIET=false)
 # println(data.blocksize[1])
 

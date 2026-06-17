@@ -2289,35 +2289,6 @@ function get_blocks(n, rlorder, I, J, supp::Vector{Vector{Vector{Vector{UInt16}}
     return blocks,eblocks,cl,blocksize
 end
 
-# function get_blocks2(n, rlorder, I, J, NJ, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cliquesize, cql, tsupp, basis, ebasis,nebasis; TS="block", ConjugateBasis=false, nb=0, normality=1, merge=false, md=3)
-#     blocks = Vector{Vector{Vector{Vector{Int}}}}(undef, cql)
-#     eblocks = Vector{Vector{Vector{Int}}}(undef, cql)
-#     neblocks = Vector{Vector{Vector{Int}}}(undef, cql)
-#     cl = Vector{Vector{Int}}(undef, cql)
-#     blocksize = Vector{Vector{Vector{Int}}}(undef, cql)
-#     for i = 1:cql
-#         # temp_tsupp = deepcopy(tsupp)
-#         # for j in eachindex(temp_tsupp)
-#         #     temp_tsupp[j][3] = [x > UInt16(n) ? x - UInt16(n) : x for x in temp_tsupp[j][3]]
-#         # end
-#         # ksupp = TS ? tsupp[[issubset(union(tsupp[j][1], tsupp[j][2], temp_tsupp[j][3]), cliques[i]) for j = 1: length(tsupp)]] : nothing
-#         ksupp = TS == false ? nothing : tsupp[[
-#             let 
-#                 modified_3rd_l = [x > UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]
-#                 # modified_3rd_g = [x <= UInt16(n) ? x + UInt16(n) : x for x in tsupp[j][3]]
-#                 # issubset(union(tsupp[j][1], tsupp[j][2], modified_3rd_l, modified_3rd_g), cliques[i])
-#                 issubset(union(tsupp[j][1], modified_3rd_l), cliques[i])
-#             end 
-#             for j in eachindex(tsupp)
-#         ]]
-#         # ksupp = TS == false ? nothing : tsupp[[issubset(union(tsupp[j][1], tsupp[j][2], tsupp[j][3].=[x <= UInt16(n) ? x - UInt16(n) : x for x in tsupp[j][3]]), cliques[i]) for j in eachindex(tsupp)]]
-#         # println(ksupp)
-#         blocks[i],eblocks[i],cl[i],blocksize[i] = get_blocks(length(I[i]), length(J[i]), rlorder[i], ksupp, supp[[I[i]; J[i]].+1], basis[i], 
-#         ebasis[i], TS=TS, ConjugateBasis=ConjugateBasis, merge=merge, md=md, nb=nb, normality=normality, nvar=cliquesize[i])
-#     end
-#     return blocks,eblocks,cl,blocksize
-# end
-
 function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
     I = [Int[] for i=1:cql]
     J = [Int[] for i=1:cql]
@@ -2342,35 +2313,6 @@ function assign_constraint(n,m, numeq, supp::Vector{Vector{Vector{Vector{UInt16}
         end
     end
     return I,J,ncc
-end
-
-function assign_constraint2(n,m,m1,numeq, supp::Vector{Vector{Vector{Vector{UInt16}}}}, cliques, cql)
-    I = [Int[] for i=1:cql]
-    J = [Int[] for i=1:cql]
-    NJ = [Int[] for i=1:cql]
-    ncc = Int[]
-    for i = 1:m
-        temp1 = copy(supp[i+1][1][3])
-        temp1 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp1]
-        temp = copy([supp[i][1][1];temp1])
-        for j = 2:length(supp[i+1])
-            temp2 = copy(supp[i+1][j][3])
-            temp2 .=  [ x > UInt16(n) ? x - UInt16(n) : x for x in temp2]
-            append!(temp, [supp[i+1][j][1];temp2])
-        end
-        ind = findall(k->issubset(unique(temp), cliques[k]), 1:cql)
-        # ind = findall(k->issubset(unique(reduce(vcat, [[item[1];item[2];item[3]] for item in supp[i+1]])), cliques[k]), 1:cql)
-        if isempty(ind)
-            push!(ncc, i)
-        elseif i <= m - numeq
-            push!.(I[ind], i)
-        elseif i <= m - m1
-            push!.(J[ind], i)
-        else
-            push!.(NJ[ind], i)
-        end
-    end
-    return I,J,NJ,ncc
 end
 
 function get_graph(tsupp::Vector{Vector{Vector{UInt16}}}, basis; nb=0, ConjugateBasis=false)
