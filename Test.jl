@@ -38,7 +38,7 @@ end
 @time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, addicons = false,solution = false, QUIET=false)
 #RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-opt,sol,data = tssos(pop, x, 1, TS=false, solve=true, QUIET=false)
+opt,sol,data = tssos(pop, x, 1, TS=false, solve=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -62,7 +62,7 @@ gn = [1 - q[i]*q[i+n] for i = 1:n]
 @time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=false)
 # RSOS:d =1
 pop,x = quaternion_to_real([fr, g], q)
-@time opt,sol,data = tssos(pop, x, 1, TS=false, solve=true,QUIET=false)
+@time opt,sol,data = tssos(pop, x, 1, TS=false, solution=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -234,7 +234,7 @@ f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coeli
 @time qtssos([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
 # RSOS :d=2
 pop,x = quaternion_to_real([f;gs], q)
-@time opt,sol,data = cs_tssos(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
+@time opt,sol,data = tssos(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
 ub = local_solution(data.n,data.m,data.supp,data.coe;nb=data.nb,numeq=data.numeq,startpoint=rand(data.n),QUIET=true)[1]
 println(ub)
 
@@ -317,12 +317,28 @@ n = length(S_B[1,:])
 Q = -(S_B - S_W)
 Q_sym = (Q + Q') / 2
 f = transpose(q[n+1:2n])*Q_sym*q[1:n]
+Fsupp = Vector{Vector{UInt16}}[]
+Fcoe = QuaternionF64[]
+for i = 1:size(Q_sym,1), j = 1:size(Q_sym,1)
+    if Q_sym[i, j]!=0
+        a = deepcopy([UInt16[], UInt16[], [UInt16(i)]])
+        b = deepcopy([UInt16[], UInt16[], [UInt16(j)]])
+        bi = qtermadd(b, a, n) 
+        idx = findfirst(x -> x == bi, Fsupp)
+        if idx === nothing
+            push!(Fsupp, bi)
+            push!(Fcoe, Q_sym[i,j])
+        else
+            Fcoe[idx] += Q_sym[i,j]
+        end  # w_j * w_i^*
+    end
+end
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
 P = conj.(Q_sym)
 fr = transpose(q[1:n])*P*q[n+1:2n]
 
 # QSOS d=1
-@time qtssos([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false,addrcons=false,QUIET=false)
+@time qtssos([f,g], q, n, 1, numeq=1, fsupp=Fsupp, fcoe=Fcoe, TS=false,CS=false,ipart=true, conjubasis=false,addrcons=false,QUIET=false)
 
 # RSOS d=1
 pop,x = quaternion_to_real([fr;g], q)
