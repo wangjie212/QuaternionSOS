@@ -11,14 +11,14 @@ using LinearAlgebra
 import DynamicPolynomials as DP
 import CliqueTrees
 
-include("D:/Programs/QuaternionSOS/ncutils.jl")
-include("D:/Programs/QuaternionSOS/Qpop.jl")
+include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/ncutils.jl")
+include("C:/Users/qingchefff/Documents/julia/Quat/QuaternionSOS/Qpop.jl")
 
 #### Test 1 
 ### set: f = [q]_1^*Q[q]_1, Q:real, n=20,40,60
 
 Random.seed!(1)
-n = 10
+n = 40
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, conjugates=false, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -36,18 +36,18 @@ end
 ## ball
 
 #QSOS: basis[q]_1
-@time opt = qtssos([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, solution = false, QUIET=false)
-@time opt = qtssos([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, solution = false, QUIET=false)
+@time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, solution = false, QUIET=false)
+@time opt = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, solution = false, QUIET=false)
 #RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-opt,sol,data = tssos(pop, x, 1, TS=false, solve=false, QUIET=true)
+opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true, QUIET=false)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
 ## unit norm
-@time opt = qtssos([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, solution = false , QUIET=true)
+@time opt = qtssos([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, solution = false , QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
-opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
+opt,sol,data = tssos_first(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
 # opt,sol,data = tssos(pop, x, 2, numeq=n, TS=false, solve=false, QUIET=true)
 # upper bound
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
@@ -93,7 +93,7 @@ println(ans2)
 
 ### set: f = [q]_1^*Q[q]_1, Q:quaternion, n=10,20,30,40
 Random.seed!(1)
-n = 3
+n = 40
 @ncpolyvar q[1:2n]
 f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, conjugates=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -109,7 +109,7 @@ for i in 1:n
 end
 ## ball
 # QSOS: basis[q]_1
-@time opt = qtssos([f, g], q, n, 2, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=false)
+@time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=false)
 # @time opt = qtssos([[f, g];comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 # @time opt = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=true, solution = false, QUIET=true)
 @time opt = qtssos([[f, g];comm_constraints], q, n, 1, numeq=length(comm_constraints), rncnumeq=length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
@@ -119,8 +119,8 @@ end
 
 # RSOS:d =1
 pop,x = quaternion_to_real([fr, g], q)
-@time opt,sol,data = tssos(pop, x, 1, TS=false, solution=false, QUIET=true)
-@time opt,sol,data = tssos(pop, x, 2, TS=false, solution=false, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true,QUIET=false)
+@time opt,sol,data = tssos_first(pop, x, 2, TS=false, solution=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -129,7 +129,7 @@ println(ub)
 @time opt= qtssos([f], q, n, 1, nb=n, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 @time opt= qtssos([f;gn], q, n, 2, numeq=n, fsupp=Fsupp, fcoe=Fcoe,TS=false, ipart=true,conjubasis=false, solution = false, QUIET=true)
 pop,x = quaternion_to_real([fr;gn], q)
-@time opt,sol,data =tssos(pop, x, 1, numeq=n, TS=false, solution=false, QUIET=true)
+@time opt,sol,data =tssos_first(pop, x, 1, numeq=n, TS=false, solution=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -176,8 +176,8 @@ println(ans2)
 #### Test 2
 ###set: f = [q,\bar(q)]_1^*Q[q,\bar(q)]_1, Q:real, n=20,40,60
 
-Random.seed!(1)
-n = 4
+Random.seed!(3)
+n = 60
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -201,8 +201,8 @@ end
 
 # RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
-@time opt,sol,data = tssos(pop, x, 1, TS=false, solve=false, QUIET=true)
-@time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 1, TS=false, solve=true, QUIET=true)
+# @time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -211,6 +211,7 @@ println(ub)
 @time opt = qtssos([f;gn], q, n, 2, numeq=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 # @time opt = qtssos([f], q, n, 1, nb=n,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 @time opt = qtssos([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
+@time opt = qtssos([f;comm_constraints], q, n, 1, nb=n,numeq=length(comm_constraints),rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 # @time opt = qtssos([f;gn;comm_constraints], q, n, 1, numeq=n+length(comm_constraints),rncnumeq= length(comm_constraints), normality=1,fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=false, QUIET=true)
 pop,x = quaternion_to_real([f;gn], q)
 @time opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false, solve=false, QUIET=true)
@@ -345,8 +346,8 @@ println(ans2)
 
 ###set: f = [q]_2^*Q[q]_2, Q:real, n=1,2,3,4,5,6；
 
-Random.seed!(1)
-n = 4
+Random.seed!(3)
+n = 6
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 2, conjugates=false, coelimit=true)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -375,7 +376,8 @@ println(f)
 
 #RSOS
 pop,x = quaternion_to_real([f, g], q)
-@time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
+# @time opt,sol,data = tssos(pop, x, 2, TS=false, solve=false, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 2, TS=false, solve=true, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -389,7 +391,7 @@ println(ub)
 @time qtssos([f;gn;comm_constraints], q, n, 2, numeq=n+length(comm_constraints), rncnumeq= length(comm_constraints), fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 @time qtssos([f;comm_constraints], q, n, 2, numeq=length(comm_constraints), rncnumeq= length(comm_constraints),nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false, ipart=false, conjubasis=true, QUIET=true)
 pop,x = quaternion_to_real([f; gn], q)
-@time opt,sol,data = tssos(pop, x, 2, numeq=n, TS=false, solve=false, QUIET=true)
+@time opt,sol,data = tssos_first(pop, x, 2, numeq=n, TS=false, solve=true, QUIET=true)
 ub = local_solution(data.npop, data.n, numeq=data.numeq, startpoint=rand(data.n), QUIET=true)[1]
 println(ub)
 
@@ -527,14 +529,13 @@ size =4 #cliquesize
 @ncpolyvar q[1:2n]
 # f,gs = cliques_sparserandomsymfunc(q, n, cn,size,1,0.1,conjugates=false, coelimit=false)
 f,gs,Fsupp,Fcoe = cliques_randomsymfunc(q, n, cn,size,1,conjugates=false, coelimit=false)
-
 ## sphere
 
 # QSOS: d=1
 @time qtssos([f;gs], q, n, 1,fsupp=Fsupp, fcoe=Fcoe, numeq=cn, TS=false,CS ="MF",ipart=false,conjubasis=true, QUIET=false)
 
 # RSOS: d=1
-pop,x = quaternion_to_real([f; gs], q)
+pop,x = quaternion_to_real([f; gs;], q)
 @time opt,sol,data = tssos(pop, x, 1, numeq=cn, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
 
 
@@ -545,12 +546,22 @@ pop,x = quaternion_to_real([f; gs], q)
 
 ###[n,cn,size] = [60,20,4], [90,30,4], [120,40,4]
 
-Random.seed!(1)
-n = 60
-cn = 20 #number of cliques
-size =4 #cliquesize
+Random.seed!(3)
+n= 20
+cn = 7 #number of cliques
+size = 4 #cliquesize
 @ncpolyvar q[1:2n]
 f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coelimit=false)
+comm_constraints = typeof(f)[]
+for i in 1:n
+    for j in 1:n
+        if i != j
+            expr = q[i]*q[j] + q[i+n]*q[j] - q[j]*q[i] - q[j]*q[i+n]
+            push!(comm_constraints, expr)
+        end
+    end
+end
+println(length(comm_constraints))
 # f,g = cliques_sparserandomsymfunc(q, n, cn,size,2,0.05,conjugates=false, coelimit=false)
 
 ## sphere
@@ -561,11 +572,47 @@ f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coeli
 # strengthened QSOS
 @time qtssos([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, normality = 1, conjubasis=false, QUIET=false)
 
+# full basis
+@time qtssos([f;gs;comm_constraints], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn+length(comm_constraints), rncnumeq= length(comm_constraints), CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
 # RSOS :d=2
-pop,x = quaternion_to_real([f; gs], q)
-@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS="MD", solve=false, QUIET=false)
+pop,x = quaternion_to_real([f;gs], q)
+@time opt,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
+ub = local_solution(data.n,data.m,data.supp,data.coe;nb=data.nb,numeq=data.numeq,startpoint=rand(data.n),QUIET=true)[1]
+println(ub)
 
 
+ans1 = []
+ans2 = []
+for N = 2:10
+    Random.seed!(N)
+    n = 30
+    cn = 10 #number of cliques
+    size =4 #cliquesize
+    @ncpolyvar q[1:2n]
+    f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coelimit=false)
+    comm_constraints = typeof(f)[]
+    for i in 1:n
+        for j in 1:n
+            if i != j
+                expr = q[i]*q[j] + q[i+n]*q[j] - q[j]*q[i] - q[j]*q[i+n]
+                push!(comm_constraints, expr)
+            end
+        end
+    end
+    @time opt1 = qtssos([f;gs;comm_constraints], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn+length(comm_constraints), rncnumeq= length(comm_constraints), CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
+    pop,x = quaternion_to_real([f; gs], q)
+    @time opt2,sol,data = cs_tssos_first(pop, x, 2, numeq=cn, TS="MD", CS="MF", solve=true, solution=true,QUIET=false)
+    push!(ans1, opt1)
+    push!(ans2, opt2)
+end
+for kk = 1:length(ans1)
+    if abs(ans1[kk]-ans2[kk]) > 1e-4
+        println(kk,"opt1: ", ans1[kk], " opt2: ", ans2[kk])
+    end
+    if kk == length(ans1)
+        println("No uneqality found for N = ", kk)
+    end
+end
 #### Application1 QMMC
 
 ### n = 20,30,40,60
@@ -586,7 +633,7 @@ end
 function generate_data()
     n = 20 # 每个样本的四元数向量长度
     class1 = [create_sample_quaternion_vector(i, n) for i in 1:5]
-    class2 = [create_sample_quaternion_vector(i+100, n) for i in 1:5] #20,50,100
+    class2 = [create_sample_quaternion_vector(i+20, n) for i in 1:5] #20,50,100
 
     serialize("data/class1.jls", class1)
     serialize("data/class2.jls", class2)
@@ -656,16 +703,16 @@ fr = transpose(q[1:n])*P*q[n+1:2n]
 pop,x = quaternion_to_real([fr;g], q)
 @time opt,sol,data = tssos(pop, x, 1, numeq=1, TS="MD",solution=false, QUIET=false)
 
-# 从 moment矩阵里恢复近似最优解
-@time opt,sol = qtssos([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false, solve=false,QUIET=true)
-# 计算模长
-qnorm = norm(sol)
-# 如果模长不是1，则归一化
-if abs(qnorm - 1) > 1e-6  # 允许一定误差
-    sol = sol ./ qnorm
-end
-upper_bound = real(transpose(sol)*P*conj.(sol))
-println("Upper bound:",upper_bound)
+# # 从 moment矩阵里恢复近似最优解
+# @time opt,sol = qtssos([f,g], q, n, 1, numeq=1, TS=false,CS=false,ipart=true, conjubasis=false, solve=false,QUIET=true)
+# # 计算模长
+# qnorm = norm(sol)
+# # 如果模长不是1，则归一化
+# if abs(qnorm - 1) > 1e-6  # 允许一定误差
+#     sol = sol ./ qnorm
+# end
+# upper_bound = real(transpose(sol)*P*conj.(sol))
+# println("Upper bound:",upper_bound)
 
 
 #### Application2 旋转同步
@@ -678,8 +725,8 @@ function rand_unit_quaternion(rng)
 end
 
 # 设置参数
-n = 60                 # 节点个数
-rng = Xoshiro(1)        # 使用种子为1的伪随机数生成器（可复现）
+n = 40                 # 节点个数
+rng = Xoshiro(3)        # 使用种子为1的伪随机数生成器（可复现）
 prob_density = 0.2     # 图的稀疏程度
 noise_level = 0.2       # 噪声大小
 
@@ -708,10 +755,18 @@ for (i,j) in keys(Q)
     term = q[i+n]*Q[(i,j)]/2*q[j]+ q[j+n]*conj(Q[(i,j)])/2*q[i]
     f -= term
 end
+Fsupp = Vector{Vector{UInt16}}[]
+Fcoe = QuaternionF64[]
+for (i,j) in keys(Q)
+    push!(Fsupp, mono_to_term(q[j]*q[i+n], q, n) )
+    push!(Fcoe, -Q[(i,j)]/2)
+    push!(Fsupp, mono_to_term(q[i]*q[j+n], q, n) )
+    push!(Fcoe, -conj(Q[(i,j)])/2)
+end
 gn = [1 - q[i]*q[i+n] for i in 1:n] 
 
 # Step 3: Solve
-opt = @time qtssos([f], q, n, 1, nb=n, TS="MD",CS=false,ipart=true, conjubasis=false, solution=false,QUIET=false)
+opt = @time qtssos([f], q, n, 1, nb=n, fsupp=Fsupp, fcoe=Fcoe, TS=false,CS=false,ipart=true, conjubasis=false, solution=false,QUIET=false)
 # opt = @time qtssos([f], q, n, 1, nb=n, TS=false,CS=false,ipart=true, conjubasis=false, solution=false,QUIET=false)
 # Step 4 : qualify
 
@@ -722,7 +777,7 @@ for (i,j) in keys(Q)
     fr -= term
 end
 pop,x = quaternion_to_real([fr;gn], q)
-@time opt,sol,data = tssos(pop, x, 1, numeq=n, TS="MD", GroebnerBasis=false, solution=false, QUIET=false)
+@time opt,sol,data = cs_tssos_first(pop, x, 1, numeq=n, TS=false, CS="MF", solution=false, QUIET=false)
 # @time opt,sol,data = tssos(pop, x, 1, numeq=n, TS=false,solution=false, QUIET=false)
 # println(data.blocksize[1])
 
