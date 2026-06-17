@@ -972,7 +972,23 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     # return m1
 end
 
-function generate_comm_constraints(n)
+function generate_rcomm_constraints(q, n)
+    comm_constraints = typeof(1.0*q[1]+2.0*q[2])[]
+
+    for i in 1:n
+        for j in 1:n
+            if i != j
+                expr = q[i]*q[j] + q[i+n]*q[j] -
+                    q[j]*q[i] - q[j]*q[i+n]
+                push!(comm_constraints, expr)
+            end
+        end
+    end
+
+    return comm_constraints
+end
+
+function generate_icomm_constraints(n)
 
     Qi = QuaternionF64(0,1,0,0)
     Qj = QuaternionF64(0,0,1,0)

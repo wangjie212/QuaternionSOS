@@ -3,10 +3,16 @@ const NCPoly = DP.Polynomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrde
 const NCMono = DP.Monomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}}
 
 function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnumeq=0, qncnumeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
-    merge=false, md=3, solver="Mosek", reducebasis=false, QUIET=false, solve=true, solution=false, ipart=true,
-    dualize=false, balanced=false, mosek_setting=mosek_para(), 
-    writetofile=false, normality=0, NormalSparse=false, conjubasis=true,addcons=false)
-    supp,coe = QPolys_info(pop, z, n)
+    merge=false, md=3, solver="Mosek", QUIET=false, solve=true, solution=false, ipart=true,
+    mosek_setting=mosek_para(), normality=0, conjubasis=true,addrcons=true,addicons=false)
+    if addrcons
+        rcomm_constraints = generate_rcomm_constraints(q, n)
+        supp,coe = QPolys_info(vcat(pop,rcomm_constraints), z, n)
+        numeq = numeq + length(rcomm_constraints)
+        rncnumeq = rncnumeq + length(rcomm_constraints)
+    else
+        supp,coe = QPolys_info(pop, z, n)
+    end
     for i = 1:length(supp)
         supp[i] = standardterm.(supp[i],n)
     end
@@ -32,7 +38,6 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
     else
         time = @elapsed begin
         CS = CS == true ? "MF" : CS
-        # println(rncnumeq)
         cliques,cql,cliquesize = clique_decomp(n, m, dc, rncnumeq, supp, order=d, alg=CS)
         end
         if CS != false && QUIET == false
@@ -46,7 +51,6 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
     basis = Vector{Vector{Vector{Vector{Vector{UInt16}}}}}(undef, cql)
     for i = 1:cql
         ebasis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(J[i]))
-        # nebasis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(NJ[i]))
         if normality > 0
                 basis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(I[i])+1+cliquesize[i])
                 basis[i][1] = get_qncbasis(cliques[i], n, rlorder[i]; conjubasis=conjubasis)
@@ -76,11 +80,9 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
                         unique!(basis[i][s+1])
                     end
                 end
-            # end
         else
             basis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(I[i])+1)
             basis[i][1] = get_qncbasis(cliques[i], n, d; conjubasis=conjubasis)
-            # println(length(basis[i][1]))
             if nb > 0
                 basis[i][1] = qreduce_unitnorm.(basis[i][1], n, nb=nb)
                 unique!(basis[i][1])
@@ -103,7 +105,6 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
     end
     tsupp = deepcopy(supp[1])
     for i = 2:m+1, j = 1:length(supp[i])
-        # push!(tsupp, canonical_qmono(supp[i][j],n))
         push!(tsupp, supp[i][j])
     end
     sort!(tsupp)
@@ -116,15 +117,9 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
         mb = maximum(maximum.([maximum.(blocksize[i]) for i = 1:cql]))
         println("Obtained the block structure in $time seconds.\nThe maximal size of blocks is $mb.")
     end
-    if solution
-        opt,ksupp,SDP_status,sol,moment = qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-        nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
-        return opt,sol,moment
-    else
-        opt, ksupp, SDP_status =  qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-        nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
-        return opt
-    end
+    opt, ksupp, SDP_status =  qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart,
+    nb=nb, mosek_setting=mosek_setting, normality=normality, conjubasis=conjubasis,addicons=addicons)
+    return opt
 end
 
 function QPolys_info(pop, z, n)
@@ -166,12 +161,12 @@ function QPolys_info(pop, z, n)
 end
 
 function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector{Vector{UInt16}}}}, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize; 
-    numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", solve=true, dualize=false, solution=false, ipart=true, 
-    mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false,addcons=false)
+    numeq=0, nb=0, QUIET=false, TS=false, solver="Mosek", solve=true,  solution=false, ipart=true, 
+    mosek_setting=mosek_para(), normality=0, conjubasis=false,addicons=false)
     tsupp = Vector{Vector{UInt16}}[]
     ttsupp = Vector{Vector{UInt16}}[]
-    if addcons
-        addsupp,addcoe = generate_comm_constraints(n)
+    if addicons
+        addsupp,addcoe = generate_icomm_constraints(n)
     end
     for i = 1:cql
         a = normality > 0 ? cliquesize[i] + 1 : 1
@@ -186,7 +181,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             if nb > 0
                 bi = qreduce_unitnorm(bi,n, nb=nb)
             end
-            push!(checktsupp,bi)
 
             if ipart != true
                 bi= canonical_qmono(bi,n)
@@ -266,7 +260,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                             push!(ttsupp,bi_cano)
                         end
                     end
-                    if addcons
+                    if addicons
                         for ss = 1:length(addsupp)
                             for tt = 1:4
                                 a=deepcopy(ebasis[i][j][t])
@@ -371,38 +365,11 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         gsupp = get_gsupp(rlorder, basis, ebasis, supp, cql, I, J, ncc, blocks, eblocks, cl, blocksize, cliquesize, ConjugateBasis=conjubasis, nb=nb, normality=normality)
         append!(tsupp, gsupp)
     end
-    # if solution == true && TS != false
-    #     ksupp = deepcopy(tsupp)
-    #     for i = 1:cql, j = 1:cliquesize[i]
-    #         push!(tsupp, [UInt16[], UInt16[], UInt16[cliques[i][j]]])
-    #         for k = 1:cliquesize[i]
-    #             if ipart
-    #                 bi = qtermadd([UInt16[], UInt16[], UInt16[cliques[i][k]]],[UInt16[], UInt16[], UInt16[cliques[i][j]]],n)
-    #             else
-    #                 bi = qtermaddleft([UInt16[], UInt16[], UInt16[cliques[i][j]]],[UInt16[], UInt16[], UInt16[cliques[i][k]]],n)
-    #             end
-    #             #bi = qtermadd([UInt16[], UInt16[], UInt16[cliques[i][j]]],[UInt16[], UInt16[], UInt16[cliques[i][k]]],n)
-    #             # bi = qtermadd([UInt16[], UInt16[], UInt16[cliques[i][k]]],[UInt16[], UInt16[], UInt16[cliques[i][j]]],n)
-    #             if nb > 0
-    #                 bi = qreduce_unitnorm(bi, n, nb=nb)
-    #             end
-    #             push!(tsupp, bi)
-    #         end
-    #     end
-    # end
     sort!(tsupp)
     unique!(tsupp)
     sort!(ttsupp)
     unique!(ttsupp)
-    if solution == true && TS != false
-        sort!(ksupp)
-        unique!(ksupp)
-    else
-        ksupp = tsupp
-    end
-    # ksupp = deepcopy(tsupp)
-    # sort!(tsupp)
-    # unique!(tsupp)
+    ksupp = tsupp
     #initial set
     objv = SDP_status= nothing
     if solve == true
@@ -423,49 +390,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         hnom = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, n)
         pos = Vector{Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}}(undef, cql)
         for i = 1:cql
-            if solution == true && TS != false
-                bs = cliquesize[i] + 1
-                if ipart == true
-                    pos0 = @variable(model, [1:4bs, 1:4bs], PSD)
-                else
-                    pos0 = @variable(model, [1:bs, 1:bs], PSD)
-                end
-                for t = 1:bs, r = 1:bs
-                    if t == 1 && r == 1
-                        bi = [UInt16[], UInt16[],UInt16[]]
-                    elseif t == 1 && r > 1
-                        bi = [UInt16[],UInt16[], UInt16[cliques[i][r-1]]]
-                    elseif t > 1 && r == 1
-                        bi = [UInt16[],UInt16[], UInt16[cliques[i][t-1]]]
-                    else
-                        if ipart
-                            bi = qtermadd([UInt16[],UInt16[], UInt16[cliques[i][r-1]]],[UInt16[],UInt16[], UInt16[cliques[i][t-1]]],n)
-                        else
-                            bi = qtermaddleft([UInt16[],UInt16[], UInt16[cliques[i][t-1]]], [UInt16[],UInt16[], UInt16[cliques[i][r-1]]],n)
-                        end
-                        if nb > 0
-                            bi = qreduce_unitnorm(bi, n, nb=nb)
-                        end
-                    end
-                    bi_cano = canonical_qmono(bi,n)
-                    if nb > 0
-                        bi = qreduce_unitnorm(bi, n, nb=nb)
-                        if ipart
-                            bi_cano = qreduce_unitnorm(bi_cano, n, nb=nb)
-                        end
-                    end
-                    Locb = bfind(tsupp, ltsupp, bi)
-                    Locb_cano = bfind(tsupp, ltsupp, bi_cano)
-                    if ipart == true
-                        @inbounds add_to_expression!(rcons[Locb_cano], pos0[t,r]+pos0[t+bs,r+bs]+pos0[t+2*bs,r+2*bs]+pos0[t+3*bs,r+3*bs])
-                        @inbounds add_to_expression!(icons[Locb], pos0[t+bs,r]-pos0[t,r+bs]+pos0[t+3*bs,r+2*bs]-pos0[t+2*bs,r+3*bs]) 
-                        @inbounds add_to_expression!(jcons[Locb], pos0[t+2*bs,r]-pos0[t,r+2*bs]-pos0[t+3*bs,r+bs]+pos0[t+bs,r+3*bs])
-                        @inbounds add_to_expression!(kcons[Locb], pos0[t+3*bs,r]-pos0[t,r+3*bs]+pos0[t+2*bs,r+bs]-pos0[t+bs,r+2*bs])
-                    else
-                        @inbounds add_to_expression!(rcons[Locb_cano], pos0[t,r])
-                    end            
-                end
-            end
             a = normality > 0 ? cliquesize[i] + 1 : 1
             pos[i] = Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}(undef, length(I[i])+a)
             for j = 1:a
@@ -650,6 +574,9 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 end
             end
         end
+
+        ## equality constraints
+
         epos = Vector{Vector{Any}}(undef, cql)
         addepos = Vector{Vector{Any}}(undef, cql)
         for i = 1:cql
@@ -754,6 +681,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 end
                             end
                         end
+                    ### asymmetric equality constraints with real coefficients
                     elseif J[i][j] <= m - qncnumeq
                         bs = length(eblocks[i][j])
                         if bs == 1
@@ -940,6 +868,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 end
                             end
                         end
+                    ### asymmetric equality constraints with left quaternion coefficients
                     else
                         bs = length(eblocks[i][j])
                         if bs == 1
@@ -1099,7 +1028,8 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         end
                     end
                 end
-                if addcons
+                ### im(q_i)*q_j = q_j*im(q_i), i!=j
+                if addicons
                     addebasis = ebasis[i][end]
                     bs = length(addebasis)
                     if bs == 1
@@ -1327,7 +1257,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 # 没找到共轭项
                 if j === nothing
                     push!(visited, i)
-                    println("No conjugate found for ", mono, " at index ", i)
                     continue
                 end
 
@@ -1360,7 +1289,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 # 没找到共轭项
                 if j === nothing
                     push!(visited1, i)
-                    nonc+=1
                     continue
                 end
 
@@ -1397,7 +1325,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 # 没找到共轭项
                 if j === nothing
                     push!(visited, i)
-                    println("No conjugate found for ", mono, " at index ", i)
                     continue
                 end
 
@@ -1435,9 +1362,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         end
         if QUIET == false
             println("SDP solving time: $time seconds.")
-        end
-        if writetofile != false
-            write_to_file(dualize(model), writetofile)
         end
         SDP_status = termination_status(model)
         cons=all_constraints(model; include_variable_in_set_constraints = false)
