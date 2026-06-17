@@ -68,43 +68,6 @@ function qtermadd3left(a1::Vector{Vector{UInt16}},b1::Vector{Vector{UInt16}},c1:
     return standardterm([append!(star(a,n)[1],b[1],c[1]),append!(star(a,n)[2],b[2],c[2]),append!(star(a,n)[3],b[3],c[3])],n)
 end
 
-function _qcyclic_canon(a::Vector{Vector{UInt16}},n)
-    if length(a[3])<=1
-        return a
-    else
-        a=[a[1],a[2],minimum([[a[3][i+1:length(a[3])];a[3][1:i]] for i=0:length(a[3])-1])]
-        a=standardterm(a,n)
-        return a
-        # standardterm([a[1],a[2],minimum([[a[3][i+1:length(a[3])];a[3][1:i]] for i=0:length(a[3])-1])],n)
-    end
-end
-
-function _qcyclic_canon(w)
-    ind = w.z .> 0
-    wz = w.z[ind]
-    wv = w.vars[ind]
-    lw = length(wz)
-    if lw == 0
-        return w
-    else
-        return minimum([prod([wv[i+1:lw]; wv[1:i]] .^ [wz[i+1:lw]; wz[1:i]]) for i=0:lw-1])
-    end
-end
-
-function qcyclic_canon(supp, coe, n; type=QuaternionF64)
-    nsupp = [min(_qcyclic_canon(word,n), _qcyclic_canon([word[1],word[2],reverse(word[3])],n)) for word in supp]
-    sort!(nsupp)
-    unique!(nsupp)
-    l = length(nsupp)
-    ncoe = zeros(type, l)
-    for (i,item) in enumerate(supp)
-        bi = min(_qcyclic_canon(item,n), _qcyclic_canon([item[1],item[2],reverse(item[3])],n))
-        Locb = bfind(nsupp, l, bi)
-        ncoe[Locb] += coe[i]
-    end
-    return nsupp,ncoe
-end
-
 function mono_to_term(m, q, n)
     # if m == 1
     #     return standardterm([UInt16[], UInt16[], UInt16[]], n)
@@ -930,7 +893,6 @@ Re(m1) = Re(m2)
 Rule:
 - ignore ordering under real part symmetry
 - treat (q_i q_j) ~ (q_j q_i)
-- treat conjugate-reversed forms as identical
 """
 function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
 
@@ -1009,22 +971,6 @@ function canonical_qmono(m::Vector{Vector{UInt16}}, n::Int)
     return standardterm([m1[1], m1[2], v2],n)
     # return m1
 end
-
-function skew_entry(X,t,r,bs)
-
-    if t < r
-        idx = Int((2bs-t)*(t-1)/2) + (r-t)
-        return X[idx]
-
-    elseif t > r
-        idx = Int((2bs-r)*(r-1)/2) + (t-r)
-        return -X[idx]
-
-    else
-        return 0.0
-    end
-end
-
 
 function generate_comm_constraints(n)
 

@@ -41,46 +41,13 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
         end
     end
     I,J,ncc = assign_constraint(n, m, numeq, supp, cliques, cql)
-    # I,J,NJ,ncc = assign_constraint2(n, m, m1, numeq, supp, cliques, cql)
     rlorder = d*ones(Int, cql)
-    # basis = Vector{Vector{Vector{Vector{UInt16}}}}(undef, m+1)
-    # basis[1] = get_qncbasis(n, d; conjubasis=conjubasis)
     ebasis = Vector{Vector{Vector{Vector{Vector{UInt16}}}}}(undef, cql)
-    # nebasis = Vector{Vector{Vector{Vector{Vector{UInt16}}}}}(undef, cql)
     basis = Vector{Vector{Vector{Vector{Vector{UInt16}}}}}(undef, cql)
-    # if QUIET == false
-    #     lb = length(basis[1])
-    #     println("Maximal PSD block size: $lb.")
-    # end
-    # for s = 1:m
-    #     basis[s+1] = get_qncbasis(n, d-Int(ceil(dc[s]/2));conjubasis=conjubasis)
-    # end
-        # if nb > 0
-    #     for s = 1:m+1
-    #         basis[s] = qreduce_unitnorm.(basis[s], nb=nb)
-    #         unique!(basis[s])
-    #     end
-    # end
-    # println(supp[1])
     for i = 1:cql
         ebasis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(J[i]))
         # nebasis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(NJ[i]))
         if normality > 0
-            # if normality < d
-            #     basis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(I[i])+1)
-            #     basis[i][1] = get_qncbasis(cliques[i], n, d; conjubasis=conjubasis)
-            #     if nb > 0
-            #         basis[i][1] = qreduce_unitnorm.(basis[i][s+1], nb=nb)
-            #         unique!(basis[i][1])
-            #     end
-            #     for s = 1:length(I[i])
-            #         basis[i][s+1] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[I[i][s]]/2)))
-            #         if nb > 0
-            #             basis[i][s+1] = qreduce_unitnorm.(basis[i][s+1], nb=nb)
-            #             unique!(basis[i][s+1])
-            #         end
-            #     end
-            # else
                 basis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(I[i])+1+cliquesize[i])
                 basis[i][1] = get_qncbasis(cliques[i], n, rlorder[i]; conjubasis=conjubasis)
                 for s = 1:cliquesize[i]
@@ -133,52 +100,14 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
                 unique!(ebasis[i][s])
             end
         end
-        # for s = 1:length(NJ[i])
-        #     nebasis[i][s] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[NJ[i][s]]/2)))
-        #     if nb > 0
-        #         nebasis[i][s] = qreduce_unitnorm.(nebasis[i][s], n, nb=nb)
-        #         unique!(nebasis[i][s])
-        #     end
-        # end
     end
-    #     basis[i] = Vector{Vector{Vector{Vector{UInt16}}}}(undef, length(I[i])+1)
-    #     # println(cliques[i])
-    #     basis[i][1] = get_qncbasis(cliques[i], n, d; conjubasis=conjubasis)
-    #     # println(basis[i][1])
-    #     for s = 1:length(I[i])
-    #         basis[i][s+1] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[I[i][s]]/2)))
-    #         if nb > 0
-    #             basis[i][s+1] = qreduce_unitnorm.(basis[i][s+1], nb=nb)
-    #             unique!(basis[i][s+1])
-    #         end
-    #     end
-    #     for s = 1:length(J[i])
-    #         ebasis[i][s] = get_qncbasis(cliques[i], n, rlorder[i]-Int(ceil(dc[J[i][s]]/2)))
-    #         if nb > 0
-    #             ebasis[i][s] = qreduce_unitnorm.(ebasis[i][s+1], nb=nb)
-    #             unique!(ebasis[i][s])
-    #         end
-    #     end
-    # end
-    # tsupp = canonical_qmono.(deepcopy(supp[1]),n)
     tsupp = deepcopy(supp[1])
-    # println(tsupp)
-    # for k = 1:length(tsupp)
-    #     if tsupp[k] != canonical_qmono(tsupp[k],n)
-    #         println("add 1st:",tsupp[k],canonical_qmono(tsupp[k],n))
-    #     end
-    # end
     for i = 2:m+1, j = 1:length(supp[i])
         # push!(tsupp, canonical_qmono(supp[i][j],n))
         push!(tsupp, supp[i][j])
     end
     sort!(tsupp)
     unique!(tsupp)
-    # for k = 1:length(tsupp)
-    #     if tsupp[k] != canonical_qmono(tsupp[k],n)
-    #         println("add 1st:",tsupp[k],canonical_qmono(tsupp[k],n))
-    #     end
-    # end
     if TS != false && QUIET == false
         println("Starting to compute the block structure...")
     end
@@ -196,9 +125,6 @@ function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnume
         nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis,addcons=addcons)
         return opt
     end
-    # opt,ksupp,SDP_status,sol,moment = qsolvesdp(n, m, rlorder, supp, coe, basis, ebasis, cliques, cql, cliquesize, I, J, ncc, blocks, eblocks, cl, blocksize, numeq=numeq, QUIET=QUIET, TS=TS, solver=solver, solve=solve, solution=solution, ipart=ipart, balanced=balanced,
-    # nb=nb, mosek_setting=mosek_setting, dualize=dualize, writetofile=writetofile, normality=normality, NormalSparse=NormalSparse,conjubasis=conjubasis)
-    # return opt,sol,moment
 end
 
 function QPolys_info(pop, z, n)
@@ -244,7 +170,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
     mosek_setting=mosek_para(), writetofile=false, balanced=false, normality=0, NormalSparse=false,conjubasis=false,addcons=false)
     tsupp = Vector{Vector{UInt16}}[]
     ttsupp = Vector{Vector{UInt16}}[]
-    checktsupp = Vector{Vector{UInt16}}[]
     if addcons
         addsupp,addcoe = generate_comm_constraints(n)
     end
@@ -258,12 +183,11 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             else
                 @inbounds bi = qtermaddleft(at,b,n)
             end
-            # @inbounds bi = qtermadd(b,at,n)
             if nb > 0
                 bi = qreduce_unitnorm(bi,n, nb=nb)
             end
             push!(checktsupp,bi)
-            # ====== NEW: canonical mapping ======
+
             if ipart != true
                 bi= canonical_qmono(bi,n)
             else
@@ -281,29 +205,21 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             end
         end
         for (j, k) in enumerate(J[i])
-            # println("ebasis",ebasis[i][j])
             if m - rncnumeq < J[i][j] <= m - qncnumeq
                 bs = length(eblocks[i][j])
-                # println(bs)
                 for t = 1:bs, r = 1:bs
-                # for t = 1:bs-1, r = t+1:bs
                     for s = 1:length(supp[k+1])
-                        a=deepcopy(ebasis[i][j][t])
+                        a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                         b=deepcopy(supp[k+1][s])
-                        # c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
-                        c=deepcopy(ebasis[i][j][r])
+                        c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
                         if ipart
                             @inbounds bi = qtermadd3(b,c,a,n)
                         else
                             @inbounds bi = qtermadd3left(a,b,c,n)
-                            # @inbounds bi = qtermadd3left(a,c,b,n)
                         end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                         if nb > 0
                             bi = qreduce_unitnorm(bi,n;nb=nb)
                         end
-                        push!(checktsupp,bi)
                         if ipart != true
                             bi= canonical_qmono(bi,n)
                         else
@@ -318,40 +234,26 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         push!(tsupp, bi)
                         if ipart
                             push!(ttsupp,bi_cano)
-                            # push!(tsupp,bi_cano)
                         end
                     end
                     for s = 1:length(supp[k+1])
-                        # a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
-                        a=deepcopy(ebasis[i][j][t])
+                        a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                         b=deepcopy(supp[k+1][s])
-                        # c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
-                        c=deepcopy(ebasis[i][j][r])
+                        c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
                         a_star = star(deepcopy(a),n)
                         b_star = star(deepcopy(b),n)
                         if ipart
-                            # @inbounds bi = qtermadd3(b_star,c,a,n)
                             @inbounds bi = qtermadd3(c,a_star,b,n)
                         else
                             @inbounds bi = qtermadd3left(a,b_star,c,n)
-                            # @inbounds bi = qtermadd3left(a,c,b,n)
                         end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                         if nb > 0
                             bi = qreduce_unitnorm(bi,n;nb=nb)
                         end
-                        # if bi == Vector{UInt16}[[], [], [0x0001, 0x0001, 0x0004]]
-                        #     println("a",a,"b",b_star,"c",c)
-                        # end
-                        push!(checktsupp,bi)
                         if ipart != true
                             bi= canonical_qmono(bi,n)
                         else
                             bi_cano = canonical_qmono(bi,n)
-                            if bi_cano != canonical_qmono(deepcopy(bi_cano),n)
-                                println(bi_cano)
-                            end 
                         end
                         if nb > 0
                             bi= qreduce_unitnorm(bi,n, nb=nb)
@@ -362,7 +264,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         push!(tsupp, bi)
                         if ipart
                             push!(ttsupp,bi_cano)
-                            # push!(tsupp,bi_cano)
                         end
                     end
                     if addcons
@@ -439,13 +340,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         end
                         if ipart != true
                             bi= canonical_qmono(bi,n)
-                        # else
-                        #     bi_star = star(deepcopy(bi),n)
-                        #     if bi_star == bi
-                        #         bi = canonical_qmono(bi,n)
-                        #     end
                         end
-                        # bi_canon = canonical_qmono(bi,n)
                         if nb > 0
                             bi = qreduce_unitnorm(bi,n, nb=nb)
                         end
@@ -471,98 +366,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 end
             end
         end
-        # if cql>1
-        #     basis0 = get_qncbasis(n, 1)
-        #     bs = length(basis0)
-        #         # println(bs)
-        #         for k = m-rncnumeq+1:m
-        #             for t = 1:bs, r = 1:bs
-        #             # for t = 1:bs-1, r = t+1:bs
-        #                 for s = 1:length(supp[k+1])
-        #                     a=deepcopy(basis0[t])
-        #                     b=deepcopy(supp[k+1][s])
-        #                     c=deepcopy(basis0[r])
-        #                     if ipart
-        #                         @inbounds bi = qtermadd3(b,c,a,n)
-        #                     else
-        #                         @inbounds bi = qtermadd3left(a,b,c,n)
-        #                         # @inbounds bi = qtermadd3left(a,c,b,n)
-        #                     end
-        #                                 #@inbounds bi = qtermadd3(a,b,c,n)
-        #                                 # @inbounds bi = qtermadd3(b,c,a,n)
-        #                     if nb > 0
-        #                         bi = qreduce_unitnorm(bi,n;nb=nb)
-        #                     end
-        #                     if ipart != true
-        #                         bi= canonical_qmono(bi,n)
-        #                     else
-        #                         bi_cano = canonical_qmono(bi,n)
-        #                     end
-        #                     if nb > 0
-        #                         bi= qreduce_unitnorm(bi,n, nb=nb)
-        #                         if ipart 
-        #                             bi_cano= qreduce_unitnorm(bi_cano,n, nb=nb)
-        #                         end
-        #                     end
-        #                     push!(tsupp, bi)
-        #                     if ipart
-        #                         push!(ttsupp,bi_cano)
-        #                     end
-        #                 end
-        #                 for s = 1:length(supp[k+1])
-        #                     a=deepcopy(basis0[t])
-        #                     b=deepcopy(supp[k+1][s])
-        #                     c=deepcopy(basis0[r])
-        #                     a_star = star(deepcopy(a),n)
-        #                     b_star = star(deepcopy(b),n)
-        #                     if ipart
-        #                         @inbounds bi = qtermadd3(c,a_star,b,n)
-        #                     else
-        #                         @inbounds bi = qtermadd3left(a,b_star,c,n)
-        #                     end
-        #                     if nb > 0
-        #                         bi = qreduce_unitnorm(bi,n;nb=nb)
-        #                     end
-        #                     if ipart != true
-        #                         bi= canonical_qmono(bi,n)
-        #                     else
-        #                         bi_cano = canonical_qmono(bi,n)
-        #                         if bi_cano != canonical_qmono(deepcopy(bi_cano),n)
-        #                             println(bi_cano)
-        #                         end 
-        #                     end
-        #                     if nb > 0
-        #                         bi= qreduce_unitnorm(bi,n, nb=nb)
-        #                         if ipart 
-        #                             bi_cano= qreduce_unitnorm(bi_cano,n, nb=nb)
-        #                         end
-        #                     end
-        #                     push!(tsupp, bi)
-        #                     if ipart
-        #                         push!(ttsupp,bi_cano)
-        #                     end
-        #                 end
-        #             end
-        #         end
-            # for s = m-rncnumeq+1:m
-            #     for k = 1:length(supp[s+1])
-            #         if ipart != true
-            #             push!(tsupp, canonical_qmono(deepcopy(supp[s+1][k]),n))
-            #         else
-            #             push!(tsupp, supp[s+1][k])
-            #             push!(ttsupp, canonical_qmono(deepcopy(supp[s+1][k]),n))
-            #         end 
-            #     end
-            #     for k = 1:length(supp[s+1])
-            #         if ipart != true
-            #             push!(tsupp, canonical_qmono(star(deepcopy(supp[s+1][k]),n),n))
-            #         else
-            #             push!(tsupp, supp[s+1][k])
-            #             push!(ttsupp, canonical_qmono(star(deepcopy(supp[s+1][k]),n),n))
-            #         end 
-            #     end             
-            # end
-        # end
     end
     if TS != false
         gsupp = get_gsupp(rlorder, basis, ebasis, supp, cql, I, J, ncc, blocks, eblocks, cl, blocksize, cliquesize, ConjugateBasis=conjubasis, nb=nb, normality=normality)
@@ -611,7 +414,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         model = Model(Mosek.Optimizer)
         set_optimizer_attribute(model, MOI.Silent(), QUIET)
         time = @elapsed begin
-        # rcons = [AffExpr(0) for i=1:lttsupp]
         rcons = [AffExpr(0) for i=1:ltsupp]
         if ipart==true || qncnumeq > 0
             icons = [AffExpr(0) for i=1:ltsupp]
@@ -641,21 +443,10 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         else
                             bi = qtermaddleft([UInt16[],UInt16[], UInt16[cliques[i][t-1]]], [UInt16[],UInt16[], UInt16[cliques[i][r-1]]],n)
                         end
-                        #bi = qtermadd([UInt16[],UInt16[], UInt16[cliques[i][t-1]]], [UInt16[],UInt16[], UInt16[cliques[i][r-1]]],n)
-                        # bi = qtermadd([UInt16[],UInt16[], UInt16[cliques[i][r-1]]],[UInt16[],UInt16[], UInt16[cliques[i][t-1]]],n)
                         if nb > 0
                             bi = qreduce_unitnorm(bi, n, nb=nb)
                         end
                     end
-                    # Locb = bfind(tsupp, ltsupp, bi)
-                    # if ipart != true
-                    #     bi= canonical_qmono(bi,n)
-                    # else
-                    #     bi_star = star(deepcopy(bi),n)
-                    #     if bi_star == bi
-                    #         bi = canonical_qmono(bi,n)
-                    #     end
-                    # end
                     bi_cano = canonical_qmono(bi,n)
                     if nb > 0
                         bi = qreduce_unitnorm(bi, n, nb=nb)
@@ -666,15 +457,12 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                     Locb = bfind(tsupp, ltsupp, bi)
                     Locb_cano = bfind(tsupp, ltsupp, bi_cano)
                     if ipart == true
-                        # @inbounds add_to_expression!(rcons[Locb], pos0[t,r]+pos0[t+bs,r+bs]+pos0[t+2*bs,r+2*bs]+pos0[t+3*bs,r+3*bs])
                         @inbounds add_to_expression!(rcons[Locb_cano], pos0[t,r]+pos0[t+bs,r+bs]+pos0[t+2*bs,r+2*bs]+pos0[t+3*bs,r+3*bs])
                         @inbounds add_to_expression!(icons[Locb], pos0[t+bs,r]-pos0[t,r+bs]+pos0[t+3*bs,r+2*bs]-pos0[t+2*bs,r+3*bs]) 
                         @inbounds add_to_expression!(jcons[Locb], pos0[t+2*bs,r]-pos0[t,r+2*bs]-pos0[t+3*bs,r+bs]+pos0[t+bs,r+3*bs])
                         @inbounds add_to_expression!(kcons[Locb], pos0[t+3*bs,r]-pos0[t,r+3*bs]+pos0[t+2*bs,r+bs]-pos0[t+bs,r+2*bs])
                     else
-                        # @inbounds add_to_expression!(rcons[Locb], pos0[t,r])
                         @inbounds add_to_expression!(rcons[Locb_cano], pos0[t,r])
-
                     end            
                 end
             end
@@ -707,7 +495,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                             end
                         end
                         Locb = bfind(tsupp, ltsupp, bi)
-                        # @inbounds add_to_expression!(rcons[Locb], pos[i][j][l])
                         if ipart == true
                             Locb_cano = bfind(ttsupp, lttsupp, bi_cano)
                             @inbounds add_to_expression!(rcons[Locb_cano], pos[i][j][l])
@@ -745,7 +532,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     bi_cano = qreduce_unitnorm(bi_cano, n, nb=nb)
                                 end
                             end
-                            # bi = canonical_qmono(bi,n)
                             Locb = bfind(tsupp, ltsupp, bi)
                             if ipart == true
                                 Locb_cano = bfind(ttsupp, lttsupp, bi_cano)
@@ -754,7 +540,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 @inbounds add_to_expression!(jcons[Locb], pos[i][j][l][t+2*bs,r]-pos[i][j][l][t,r+2*bs]-pos[i][j][l][t+3*bs,r+bs]+pos[i][j][l][t+bs,r+3*bs])
                                 @inbounds add_to_expression!(kcons[Locb], pos[i][j][l][t+3*bs,r]-pos[i][j][l][t,r+3*bs]+pos[i][j][l][t+2*bs,r+bs]-pos[i][j][l][t+bs,r+2*bs])
                             else
-                                # @inbounds add_to_expression!(rcons[Locb], pos[i][j][l][t,r])
                                 @inbounds add_to_expression!(rcons[Locb], pos[i][j][l][t,r])
                             end            
                         end
@@ -763,7 +548,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             end
         end
         for i = 1:cql, (j, k) in enumerate(I[i])
-            # a = normality >= rlorder[i] ? 1 + cliquesize[i] : 1
             a = normality > 0 ? cliquesize[i] + 1 : 1
             pos[i][j+a] = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, cl[i][j+a])
             for l = 1: cl[i][j+a]
@@ -778,10 +562,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                             @inbounds bi = qtermadd3(b,c,at,n)
                         else
                             @inbounds bi = qtermadd3left(at,b,c,n)
-                            # @inbounds bi = qtermadd3left(at,c,b,n)
                         end
-                        #@inbounds bi = qtermadd3(at,b,c,n)
-                        # @inbounds bi = qtermadd3(b,c,at,n)
                         if nb > 0
                             bi = qreduce_unitnorm(bi,n;nb=nb)
                         end
@@ -822,10 +603,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 @inbounds bi = qtermadd3(b,c,at,n)
                             else
                                 @inbounds bi = qtermadd3left(at,b,c,n)
-                                # @inbounds bi = qtermadd3left(at,c,b,n)
                             end
-                            #@inbounds bi = qtermadd3(at,b,c,n)
-                            # @inbounds bi = qtermadd3(b,c,at,n)
                             if nb > 0
                                 bi = qreduce_unitnorm(bi,n;nb=nb)
                             end
@@ -872,13 +650,10 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 end
             end
         end
-        # epos = Vector{Vector{Union{VariableRef,Symmetric{VariableRef}}}}(undef, cql)
         epos = Vector{Vector{Any}}(undef, cql)
         addepos = Vector{Vector{Any}}(undef, cql)
         for i = 1:cql
-            # println(cliques[i],J[i])
             if !isempty(J[i])
-                # epos[i] = Vector{Union{VariableRef,Symmetric{VariableRef}}}(undef, length(J[i]))
                 epos[i] = Vector{Any}(undef, length(J[i]))
                 addepos[i] = Vector{Any}(undef, 3*length(J[i]))
                 for (j, k) in enumerate(J[i])
@@ -894,10 +669,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     @inbounds bi = qtermadd3(b,c,a,n)
                                 else
                                     @inbounds bi = qtermadd3left(a,b,c,n)
-                                    # @inbounds bi = qtermadd3left(a,c,b,n)
                                 end
-                                #@inbounds bi = qtermadd3(a,b,c,n)
-                                # @inbounds bi = qtermadd3(b,c,a,n)
                                 if nb > 0
                                     bi = qreduce_unitnorm(bi,n;nb=nb)
                                 end
@@ -926,19 +698,10 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         else
                             if ipart == true
                                 epos[i][j]= @variable(model, [1:4bs, 1:4bs], Symmetric)
-                                # epos[i][j] = @variable(model,[1:Int(4bs*(4bs-1)/2)])
                             else
                                 epos[i][j]= @variable(model, [1:bs, 1:bs], Symmetric)
-                                # epos[i][j] = @variable(model,[1:Int(bs*(bs-1)/2)])
-                                # for t in 1:bs
-                                #     @constraint(model, epos[i][j][t,t] == 0)
-                                #     for r in t+1:bs
-                                #         @constraint(model, epos[i][j][r,t] == -epos[i][j][t,r])
-                                #     end
-                                # end
                             end
                             for t = 1:bs, r = 1:bs
-                            # for t = 1:bs-1, r = t+1:bs
                                 for s = 1:length(supp[k+1])
                                     a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                                     b=deepcopy(supp[k+1][s])
@@ -947,10 +710,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds bi = qtermadd3(b,c,a,n)
                                     else
                                         @inbounds bi = qtermadd3left(a,b,c,n)
-                                        # @inbounds bi = qtermadd3left(a,c,b,n)
                                     end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                                     if nb > 0
                                         bi = qreduce_unitnorm(bi,n;nb=nb)
                                     end
@@ -990,7 +750,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
                                     else
                                         @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][t,r])
-                                        # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
                                     end                   
                                 end
                             end
@@ -999,7 +758,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         bs = length(eblocks[i][j])
                         if bs == 1
                             epos[i][j] = @variable(model)
-                            # epos[i][j] = 0.0
                             for s = 1:length(supp[k+1])
                                 a=deepcopy(ebasis[i][j][eblocks[i][j][1]])
                                 b=deepcopy(supp[k+1][s])
@@ -1008,10 +766,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     @inbounds bi = qtermadd3(b,c,a,n)
                                 else
                                     @inbounds bi = qtermadd3left(a,b,c,n)
-                                    # @inbounds bi = qtermadd3left(a,c,b,n)
                                 end
-                                #@inbounds bi = qtermadd3(a,b,c,n)
-                                # @inbounds bi = qtermadd3(b,c,a,n)
                                 if nb > 0
                                     bi = qreduce_unitnorm(bi,n;nb=nb)
                                 end
@@ -1045,13 +800,9 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 b_star = star(b,n)
                                 if ipart
                                     @inbounds bi = qtermadd3(c,a_star,b,n)
-                                    # @inbounds bi = qtermadd3(b_star,c,a,n)
                                 else
                                     @inbounds bi = qtermadd3left(a,b_star,c,n)
-                                    # @inbounds bi = qtermadd3left(a,c,b,n)
                                 end
-                                #@inbounds bi = qtermadd3(a,b,c,n)
-                                # @inbounds bi = qtermadd3(b,c,a,n)
                                 if nb > 0
                                     bi = qreduce_unitnorm(bi,n;nb=nb)
                                 end
@@ -1080,15 +831,10 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         else
                             if ipart == true
                                 epos[i][j]= @variable(model, [1:4bs, 1:4bs])
-                                # epos[i][j] = @variable(model,[1:Int(4bs*(4bs-1)/2)])
                             else
                                 epos[i][j]= @variable(model, [1:bs, 1:bs])
-                                # epos[i][j] = @variable(model,[1:Int(bs*(bs-1)/2)])
-                                # epos[i][j] = @variable(model, [1:bs, 1:bs])
                             end
-                            # addepos[i][j]= @variable(model, [1:bs, 1:bs])
                             for t = 1:bs, r = 1:bs
-                            # for t = 1:bs-1, r = t+1:bs
                                 for s = 1:length(supp[k+1])
                                     a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                                     b=deepcopy(supp[k+1][s])
@@ -1097,10 +843,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds bi = qtermadd3(b,c,a,n)
                                     else
                                         @inbounds bi = qtermadd3left(a,b,c,n)
-                                        # @inbounds bi = qtermadd3left(a,c,b,n)
                                     end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                                     if nb > 0
                                         bi = qreduce_unitnorm(bi,n;nb=nb)
                                     end
@@ -1140,7 +883,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
                                     else
                                         @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][t,r])
-                                        # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
                                     end               
                                 end
                                 for s = 1:length(supp[k+1])
@@ -1150,14 +892,10 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     a_star = star(a,n)
                                     b_star = star(b,n)
                                     if ipart
-                                        # @inbounds bi = qtermadd3(b_star,c,a,n)
                                         @inbounds bi = qtermadd3(c,a_star,b,n)
-                                        # @inbounds bi = qtermadd3(c,a_star,b,n)
                                     else
                                         @inbounds bi = qtermadd3left(a,b_star,c,n)
                                     end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                                     if nb > 0
                                         bi = qreduce_unitnorm(bi, n;nb=nb)
                                     end
@@ -1174,27 +912,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     end
                                     Locb = bfind(tsupp, ltsupp, bi)
                                     if ipart == true
-                                        # @inbounds add_to_expression!(rcons[Locb_cano], real(coe[k+1][s]), epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[1], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[2], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-                                        # @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[3], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-            
-                                        # @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[1], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-                                        # #+A_J-A_K->-A_J+A_K/4.12
-                                        # @inbounds add_to_expression!(icons[Locb], real(coe[k+1][s]), epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(icons[Locb], imag_part(coe[k+1][s])[3], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-                                        # @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[2], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-                                        # #\A_R(J_X)-\A_I(K_X)-\A_J(R_X)+\A_K(I_X)=b_J->-\A_J(R_X)-\A_K(I_X)+\A_R(J_X)+\A_I(K_X)=b_J            
-                                        # @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[k+1][s])[2], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[k+1][s])[3], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(jcons[Locb], real(coe[k+1][s]), epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-                                        # @inbounds add_to_expression!(jcons[Locb], imag_part(coe[k+1][s])[1], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-                                        # #\A_R(K_X)+\A_I(J_X)-\A_J(I_X)-\A_K(R_X)=b_K->-\A_K(R_X)+\A_J(I_X)-\A_I(J_X)+\A_R(K_X)=b_K               
-                                        # @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[3], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[2], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-                                        # @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[1], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-                                        # @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-                                        # 
                                         Locb_cano = bfind(ttsupp, lttsupp, bi_cano)
                                         @inbounds add_to_expression!(rcons[Locb_cano], real(coe[k+1][s]), epos[i][j][r,t]+epos[i][j][r+bs,t+bs]+epos[i][j][r+2*bs,t+2*bs]+epos[i][j][r+3*bs,t+3*bs])
                                         @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[1], -epos[i][j][r+bs,t]+epos[i][j][r,t+bs]-epos[i][j][r+3*bs,t+2*bs]+epos[i][j][r+2*bs,t+3*bs])
@@ -1219,7 +936,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         
                                     else
                                         @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][r,t])
-                                        # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
                                     end         
                                 end
                             end
@@ -1228,19 +944,12 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         bs = length(eblocks[i][j])
                         if bs == 1
                             epos[i][j] = @variable(model)
-                            # epos[i][j] = 0.0
                             for s = 1:length(supp[k+1])
                                 a=deepcopy(ebasis[i][j][eblocks[i][j][1]])
                                 b=deepcopy(supp[k+1][s])
                                 c=deepcopy(ebasis[i][j][eblocks[i][j][1]])
                                 # if ipart
                                 @inbounds bi = qtermadd3(b,c,a,n)
-                                # else
-                                #     @inbounds bi = qtermadd3left(a,b,c,n)
-                                    # @inbounds bi = qtermadd3left(a,c,b,n)
-                                # end
-                                #@inbounds bi = qtermadd3(a,b,c,n)
-                                # @inbounds bi = qtermadd3(b,c,a,n)
                                 if nb > 0
                                     bi = qreduce_unitnorm(bi, n;nb=nb)
                                 end
@@ -1269,14 +978,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 b=deepcopy(supp[k+1][s])
                                 c=deepcopy(ebasis[i][j][eblocks[i][j][1]])
                                 a_star = star(a,n)
-                                # if ipart
                                 @inbounds bi = qtermadd3(c,a_star,b,n)
-                                # else
-                                #     @inbounds bi = qtermadd3left(a,b_star,c,n)
-                                #     # @inbounds bi = qtermadd3left(a,c,b,n)
-                                # end
-                                #@inbounds bi = qtermadd3(a,b,c,n)
-                                # @inbounds bi = qtermadd3(b,c,a,n)
                                 if nb > 0
                                     bi = qreduce_unitnorm(bi, n;nb=nb)
                                 end
@@ -1301,28 +1003,13 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                 end
                             end
                         else
-                            # if ipart == true
                             epos[i][j]= @variable(model, [1:4bs, 1:4bs])
-                                # epos[i][j] = @variable(model,[1:Int(4bs*(4bs-1)/2)])
-                            # else
-                            #     epos[i][j]= @variable(model, [1:bs, 1:bs])
-                                # epos[i][j] = @variable(model,[1:Int(bs*(bs-1)/2)])
-                                # epos[i][j] = @variable(model, [1:bs, 1:bs])
-                            # end
                             for t = 1:bs, r = 1:bs
-                            # for t = 1:bs-1, r = t+1:bs
                                 for s = 1:length(supp[k+1])
                                     a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                                     b=deepcopy(supp[k+1][s])
                                     c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
-                                    # if ipart
                                     @inbounds bi = qtermadd3(b,c,a,n)
-                                    # else
-                                    # @inbounds bi = qtermadd3left(a,b,c,n)
-                                        # @inbounds bi = qtermadd3left(a,c,b,n)
-                                    # end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                                     if nb > 0
                                         bi = qreduce_unitnorm(bi, n;nb=nb)
                                     end
@@ -1361,26 +1048,14 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[2], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
                                         @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[1], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
                                         @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-                                    end
-                                    # else
-                                    #     @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][t,r])
-                                    #     # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
-                                    # end                   
+                                    end                 
                                 end
                                 for s = 1:length(supp[k+1])
                                     a=deepcopy(ebasis[i][j][eblocks[i][j][t]])
                                     b=deepcopy(supp[k+1][s])
                                     c=deepcopy(ebasis[i][j][eblocks[i][j][r]])
-                                    # b_star = star(b,n)
                                     a_star = star(a,n)
-                                    # if ipart
                                     @inbounds bi = qtermadd3(c,a_star,b,n)
-                                    # else
-                                    #     @inbounds bi = qtermadd3left(a,b_star,c,n)
-                                    #     # @inbounds bi = qtermadd3left(a,c,b,n)
-                                    # end
-                                    #@inbounds bi = qtermadd3(a,b,c,n)
-                                    # @inbounds bi = qtermadd3(b,c,a,n)
                                     if nb > 0
                                         bi = qreduce_unitnorm(bi, n;nb=nb)
                                     end
@@ -1397,7 +1072,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                     end
                                     Locb = bfind(tsupp, ltsupp, bi)
                                     Locb_cano = bfind(tsupp, ltsupp, bi_cano)
-                                    # if ipart == true
                                     if qncnumeq > 0
                                         @inbounds add_to_expression!(rcons[Locb_cano], real(coe[k+1][s]), epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
                                         @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[1], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
@@ -1419,11 +1093,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                                         @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[2], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
                                         @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[1], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
                                         @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-                                    end
-                                    # else
-                                        # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][r,t])
-                                        # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
-                                    # end                   
+                                    end                 
                                 end
                             end
                         end
@@ -1544,7 +1214,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         
                                         else
                                             @inbounds add_to_expression!(rcons[Locb], real(addcoe[rr][tt]), addepos[i][(rr-1)*length(addsupp)+ss][t,r])
-                                            # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
                                         end
                                     end
                                 end               
@@ -1585,7 +1254,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                         
                                         else
                                             @inbounds add_to_expression!(rcons[Locb], real(addcoe[rr][tt]), addepos[i][(rr-1)*length(addsupp)+ss][r,t])
-                                            # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
                                         end
                                     end  
                                 end             
@@ -1595,162 +1263,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 end
             end
         end
-        # pos0 = Vector{Any}(undef, length(ncc))
-        # basis0 = get_qncbasis(n, 1)
-        # bs = length(basis0)
-        # for i = 1:length(ncc)
-        #     if ipart == true
-        #         pos0[i]= @variable(model, [1:4bs, 1:4bs])
-        #     else
-        #         pos0[i]= @variable(model, [1:bs, 1:bs])
-        #     end
-        #     for t = 1:bs, r = 1:bs
-        #         for s = 1:length(supp[ncc[i]+1])
-        #             a=deepcopy(basis0[t])
-        #             b=deepcopy(supp[ncc[i]+1][s])
-        #             c=deepcopy(basis0[r])
-        #             if ipart
-        #                 @inbounds bi = qtermadd3(b,c,a,n)
-        #             else
-        #                 @inbounds bi = qtermadd3left(a,b,c,n)
-        #             end
-        #             if nb > 0
-        #                 bi = qreduce_unitnorm(bi,n;nb=nb)
-        #             end
-        #             if ipart != true
-        #                 bi= canonical_qmono(bi,n)
-        #             else
-        #                 bi_cano= canonical_qmono(bi,n)
-        #             end
-        #             if nb > 0
-        #                 bi = qreduce_unitnorm(bi, n, nb=nb)
-        #                 if ipart
-        #                     bi_cano = qreduce_unitnorm(bi_cano, n, nb=nb)
-        #                 end
-        #             end
-        #             Locb = bfind(tsupp, ltsupp, bi)
-        #             if ipart == true
-        #                 Locb_cano = bfind(ttsupp, lttsupp, bi_cano)
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], real(coe[ncc[i]+1][s]), epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[ncc[i]+1][s])[1], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[ncc[i]+1][s])[2], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[ncc[i]+1][s])[3], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-
-        #                 @inbounds add_to_expression!(icons[Locb], -imag_part(coe[ncc[i]+1][s])[1], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-        #                 #+A_J-A_K->-A_J+A_K/4.12
-        #                 @inbounds add_to_expression!(icons[Locb], real(coe[ncc[i]+1][s]), epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(icons[Locb], imag_part(coe[ncc[i]+1][s])[3], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-        #                 @inbounds add_to_expression!(icons[Locb], -imag_part(coe[ncc[i]+1][s])[2], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-        #                 #\A_R(J_X)-\A_I(K_X)-\A_J(R_X)+\A_K(I_X)=b_J->-\A_J(R_X)-\A_K(I_X)+\A_R(J_X)+\A_I(K_X)=b_J            
-        #                 @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[ncc[i]+1][s])[2], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[ncc[i]+1][s])[3], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], real(coe[ncc[i]+1][s]), epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], imag_part(coe[ncc[i]+1][s])[1], epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-        #                 #\A_R(K_X)+\A_I(J_X)-\A_J(I_X)-\A_K(R_X)=b_K->-\A_K(R_X)+\A_J(I_X)-\A_I(J_X)+\A_R(K_X)=b_K               
-        #                 @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[ncc[i]+1][s])[3], epos[i][j][t,r]+epos[i][j][t+bs,r+bs]+epos[i][j][t+2*bs,r+2*bs]+epos[i][j][t+3*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], imag_part(coe[ncc[i]+1][s])[2], epos[i][j][t+bs,r]-epos[i][j][t,r+bs]+epos[i][j][t+3*bs,r+2*bs]-epos[i][j][t+2*bs,r+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[ncc[i]+1][s])[1], epos[i][j][t+2*bs,r]-epos[i][j][t,r+2*bs]-epos[i][j][t+3*bs,r+bs]+epos[i][j][t+bs,r+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], real(coe[ncc[i]+1][s]), epos[i][j][t+3*bs,r]-epos[i][j][t,r+3*bs]+epos[i][j][t+2*bs,r+bs]-epos[i][j][t+bs,r+2*bs])
-        #             else
-        #                 @inbounds add_to_expression!(rcons[Locb], real(coe[ncc[i]+1][s]), pos0[i][t,r])
-        #                 # @inbounds add_to_expression!(rcons[Locb], real(coe[ncc[i]+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
-        #             end               
-        #         end
-        #         for s = 1:length(supp[ncc[i]+1])
-        #             a=deepcopy(basis0[t])
-        #             b=deepcopy(supp[ncc[i]+1][s])
-        #             c=deepcopy(basis0[r])
-        #             a_star = star(a,n)
-        #             b_star = star(b,n)
-        #             if ipart
-        #                 @inbounds bi = qtermadd3(c,a_star,b,n)
-        #             else
-        #                 @inbounds bi = qtermadd3left(a,b_star,c,n)
-        #             end
-        #             if nb > 0
-        #                 bi = qreduce_unitnorm(bi, n;nb=nb)
-        #             end
-        #             if ipart != true
-        #                 bi= canonical_qmono(bi,n)
-        #             else
-        #                 bi_cano= canonical_qmono(bi,n)
-        #             end
-        #             if nb > 0
-        #                 bi = qreduce_unitnorm(bi, n, nb=nb)
-        #                 if ipart
-        #                     bi_cano = qreduce_unitnorm(bi_cano, n, nb=nb)
-        #                 end
-        #             end
-        #             Locb = bfind(tsupp, ltsupp, bi)
-        #             if ipart == true
-        #                 Locb_cano = bfind(ttsupp, lttsupp, bi_cano)
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], real(coe[k+1][s]), epos[i][j][r,t]+epos[i][j][r+bs,t+bs]+epos[i][j][r+2*bs,t+2*bs]+epos[i][j][r+3*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[1], -epos[i][j][r+bs,t]+epos[i][j][r,t+bs]-epos[i][j][r+3*bs,t+2*bs]+epos[i][j][r+2*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[2], -epos[i][j][r+2*bs,t]+epos[i][j][r,t+2*bs]+epos[i][j][r+3*bs,t+bs]-epos[i][j][r+bs,t+3*bs])
-        #                 @inbounds add_to_expression!(rcons[Locb_cano], imag_part(coe[k+1][s])[3], -epos[i][j][r+3*bs,t]+epos[i][j][r,t+3*bs]-epos[i][j][r+2*bs,t+bs]+epos[i][j][r+bs,t+2*bs])
-
-        #                 @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[1], epos[i][j][r,t]+epos[i][j][r+bs,t+bs]+epos[i][j][r+2*bs,t+2*bs]+epos[i][j][r+3*bs,t+3*bs])
-        #                 #+A_J-A_K->-A_J+A_K/4.12
-        #                 @inbounds add_to_expression!(icons[Locb], real(coe[k+1][s]), -epos[i][j][r+bs,t]+epos[i][j][r,t+bs]-epos[i][j][r+3*bs,t+2*bs]+epos[i][j][r+2*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(icons[Locb], imag_part(coe[k+1][s])[3], -epos[i][j][r+2*bs,t]+epos[i][j][r,t+2*bs]+epos[i][j][r+3*bs,t+bs]-epos[i][j][r+bs,t+3*bs])
-        #                 @inbounds add_to_expression!(icons[Locb], -imag_part(coe[k+1][s])[2], -epos[i][j][r+3*bs,t]+epos[i][j][r,t+3*bs]-epos[i][j][r+2*bs,t+bs]+epos[i][j][r+bs,t+2*bs])
-        #                 #\A_R(J_X)-\A_I(K_X)-\A_J(R_X)+\A_K(I_X)=b_J->-\A_J(R_X)-\A_K(I_X)+\A_R(J_X)+\A_I(K_X)=b_J            
-        #                 @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[k+1][s])[2], epos[i][j][r,t]+epos[i][j][r+bs,t+bs]+epos[i][j][r+2*bs,t+2*bs]+epos[i][j][r+3*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], -imag_part(coe[k+1][s])[3], -epos[i][j][r+bs,t]+epos[i][j][r,t+bs]-epos[i][j][r+3*bs,t+2*bs]+epos[i][j][r+2*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], real(coe[k+1][s]), -epos[i][j][r+2*bs,t]+epos[i][j][r,t+2*bs]+epos[i][j][r+3*bs,t+bs]-epos[i][j][r+bs,t+3*bs])
-        #                 @inbounds add_to_expression!(jcons[Locb], imag_part(coe[k+1][s])[1], -epos[i][j][r+3*bs,t]+epos[i][j][r,t+3*bs]-epos[i][j][r+2*bs,t+bs]+epos[i][j][r+bs,t+2*bs])
-        #                 #\A_R(K_X)+\A_I(J_X)-\A_J(I_X)-\A_K(R_X)=b_K->-\A_K(R_X)+\A_J(I_X)-\A_I(J_X)+\A_R(K_X)=b_K               
-        #                 @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[3], epos[i][j][r,t]+epos[i][j][r+bs,t+bs]+epos[i][j][r+2*bs,t+2*bs]+epos[i][j][r+3*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], imag_part(coe[k+1][s])[2], -epos[i][j][r+bs,t]+epos[i][j][r,t+bs]-epos[i][j][r+3*bs,t+2*bs]+epos[i][j][r+2*bs,t+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], -imag_part(coe[k+1][s])[1], -epos[i][j][r+2*bs,t]+epos[i][j][r,t+2*bs]+epos[i][j][r+3*bs,t+bs]-epos[i][j][r+bs,t+3*bs])
-        #                 @inbounds add_to_expression!(kcons[Locb], real(coe[k+1][s]), -epos[i][j][r+3*bs,t]+epos[i][j][r,t+3*bs]-epos[i][j][r+2*bs,t+bs]+epos[i][j][r+bs,t+2*bs])
-                        
-        #             else
-        #                 @inbounds add_to_expression!(rcons[Locb], real(coe[ncc[i]+1][s]), pos0[i][r,t])
-        #                 # @inbounds add_to_expression!(rcons[Locb], real(coe[k+1][s]), epos[i][j][Int((2bs-t)*(t-1)/2) + (r-t)])
-        #             end         
-        #         end
-        #     end
-        # end
-        # println(length(ncc))
-        # pos0 = Vector{Any}(undef, length(ncc))
-        # for i = 1:length(ncc)
-        #     # if ncc[i] <= m - numeq
-        #     #     pos0[i] = @variable(model, lower_bound=0)
-        #     # else
-        #     pos0[i] = @variable(model)
-        #     # end
-        #     for j = 1:length(supp[ncc[i]+1])
-        #         if ipart
-        #             Locb = bfind(tsupp, ltsupp, supp[ncc[i]+1][j])
-        #         else
-        #             Locb = bfind(tsupp, ltsupp, canonical_qmono(deepcopy(supp[ncc[i]+1][j]),n))
-        #         end
-        #         if ipart == true
-        #             Locb_cano = bfind(ttsupp, lttsupp, canonical_qmono(deepcopy(supp[ncc[i]+1][j]),n))
-        #             @inbounds add_to_expression!(icons[Locb], imag_part(coe[ncc[i]+1][j])[1], pos0[i])
-        #             @inbounds add_to_expression!(jcons[Locb], imag_part(coe[ncc[i]+1][j])[2], pos0[i])
-        #             @inbounds add_to_expression!(kcons[Locb], imag_part(coe[ncc[i]+1][j])[3], pos0[i])
-        #             @inbounds add_to_expression!(rcons[Locb_cano], real(coe[ncc[i]+1][j]), pos0[i])
-        #         end
-        #         @inbounds add_to_expression!(rcons[Locb], real(coe[ncc[i]+1][j]), pos0[i])
-        #     end
-        #     for j = 1:length(supp[ncc[i]+1])
-        #         if ipart
-        #             Locb = bfind(tsupp, ltsupp, star(deepcopy(supp[ncc[i]+1][j]),n))
-        #         else
-        #             Locb = bfind(tsupp, ltsupp, canonical_qmono(star(deepcopy(supp[ncc[i]+1][j]),n),n))
-        #         end
-        #         if ipart == true
-        #             Locb_cano = bfind(ttsupp, lttsupp, canonical_qmono(deepcopy(supp[ncc[i]+1][j]),n))
-        #             @inbounds add_to_expression!(icons[Locb], imag_part(coe[ncc[i]+1][j])[1], pos0[i])
-        #             @inbounds add_to_expression!(jcons[Locb], imag_part(coe[ncc[i]+1][j])[2], pos0[i])
-        #             @inbounds add_to_expression!(kcons[Locb], imag_part(coe[ncc[i]+1][j])[3], pos0[i])
-        #             @inbounds add_to_expression!(rcons[Locb_cano], real(coe[ncc[i]+1][j]), pos0[i])
-        #         end
-        #         @inbounds add_to_expression!(rcons[Locb], real(coe[ncc[i]+1][j]), pos0[i])
-        #     end
-        # end
         rbc = zeros(ltsupp)
         if ipart == true
             ibc = zeros(ltsupp)
@@ -1762,7 +1274,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             println("There are $ncons affine constraints.")
         end
         for i = 1:length(supp[1])
-            # mono = standardterm(supp[1][i],n)
             mono = supp[1][i]
             mono_cano = canonical_qmono(mono,n)
             if ipart != true
@@ -1784,7 +1295,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 @error "The monomial basis is not enough!"
                 return nothing,ksupp,nothing,nothing,nothing
             else
-                # rbc[Locb_cano] += real(coe[1][i])
                 if ipart == true
                     rbc[Locb_cano] += real(coe[1][i])
                     ibc[Locb] += imag_part(coe[1][i])[1]
@@ -1813,7 +1323,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 mono_star = star(deepcopy(mono), n)
 
                 j = bfind(tsupp, ltsupp, mono_star)
-                # j1 = bfind(tsupp, ltsupp, mono_star1)
 
                 # 没找到共轭项
                 if j === nothing
@@ -1831,18 +1340,7 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 push!(visited, i)
                 push!(visited, j)
 
-
-                # if abs(rbc[i]) > 1e-12 || (ipart && (abs(ibc[i]) > 1e-12 || abs(jbc[i]) > 1e-12 || abs(kbc[i]) > 1e-12))
-                #     keep[j] = false
-
-                # elseif abs(rbc[j]) > 1e-12 || (ipart && (abs(ibc[j]) > 1e-12 || abs(jbc[j]) > 1e-12 || abs(kbc[j]) > 1e-12))
-                #     keep[i] = false
-
-                # else
-                    # 都是0，默认保留较小index
                 keep[max(i,j)] = false
-                # keep[j] = false
-                # end
             end
             keep1 = trues(lttsupp)
             visited1 = Set{Int}()
@@ -1858,13 +1356,11 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 mono_star = canonical_qmono(star(deepcopy(mono), n), n)
 
                 j = bfind(ttsupp, lttsupp, mono_star)
-                # j1 = bfind(tsupp, ltsupp, mono_star1)
-
+                
                 # 没找到共轭项
                 if j === nothing
                     push!(visited1, i)
                     nonc+=1
-                    # println("No conjugate found for ", mono, " at index ", i)
                     continue
                 end
 
@@ -1878,20 +1374,9 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 push!(visited1, j)
 
                 # 两个都出现
-
-                if abs(rbc[i]) > 1e-12 || (ipart && (abs(ibc[i]) > 1e-12 || abs(jbc[i]) > 1e-12 || abs(kbc[i]) > 1e-12))
-                    keep1[j] = false
-
-                elseif abs(rbc[j]) > 1e-12 || (ipart && (abs(ibc[j]) > 1e-12 || abs(jbc[j]) > 1e-12 || abs(kbc[j]) > 1e-12))
-                    keep1[i] = false
-
-                else
-                    # 都是0，默认保留较小index
                 keep1[max(i,j)] = false
-                # keep[j] = false
-                end
+
             end
-            # @constraint(model, rcon[i=1:ltsupp], rcons[i]==rbc[i])
             inds = findall(keep)
             inds1 = findall(keep1)
         else
@@ -1909,8 +1394,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 mono_star = canonical_qmono(star(deepcopy(mono), n), n)
 
                 j = bfind(tsupp, ltsupp, mono_star)
-                # j1 = bfind(tsupp, ltsupp, mono_star1)
-
                 # 没找到共轭项
                 if j === nothing
                     push!(visited, i)
@@ -1927,26 +1410,12 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
                 push!(visited, i)
                 push!(visited, j)
 
-
-                # if abs(rbc[i]) > 1e-12 || (ipart && (abs(ibc[i]) > 1e-12 || abs(jbc[i]) > 1e-12 || abs(kbc[i]) > 1e-12))
-                #     keep[j] = false
-
-                # elseif abs(rbc[j]) > 1e-12 || (ipart && (abs(ibc[j]) > 1e-12 || abs(jbc[j]) > 1e-12 || abs(kbc[j]) > 1e-12))
-                #     keep[i] = false
-
-                # else
-                    # 都是0，默认保留较小index
                 keep[max(i,j)] = false
-                # keep[j] = false
-                # end
+
             end
             inds = findall(keep)
         end
-        # @constraint(model,rcon[k=1:length(inds1)],rcons[inds1[k]] == rbc[inds1[k]])       
         if ipart == true || qncnumeq > 0
-            # @constraint(model, icon[i=1:ltsupp], icons[i]==ibc[i])
-            # @constraint(model, jcon[i=1:ltsupp], jcons[i]==jbc[i])
-            # @constraint(model, kcon[i=1:ltsupp], kcons[i]==kbc[i])
             @constraint(model,rcon[k=1:length(inds1)],rcons[inds1[k]] == rbc[inds1[k]])  
             @constraint(model, icon[k=1:length(inds)], icons[inds[k]] == ibc[inds[k]])
             @constraint(model, jcon[k=1:length(inds)], jcons[inds[k]] == jbc[inds[k]])
@@ -1972,19 +1441,6 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         end
         SDP_status = termination_status(model)
         cons=all_constraints(model; include_variable_in_set_constraints = false)
-        # println("cons number:",length(rcons[inds]))
-        # for (i,a) in in enumerate(tsupp[inds])
-        #     print("term:", [Int.(c) for (j,c) in enumerate(a)])
-        # end
-        # for i = 1:length(inds)
-        #     println( [Int.(tsupp[i][1]);Int.(tsupp[i][2]);Int.(tsupp[i][3])])
-        # end
-        # println("term:",[Int.(a) for a in tsupp[inds]])
-        # for (i, c) in enumerate(cons)
-        #     println("Constraint $i: ")
-        #     println("func = ", JuMP.constraint_object(c).func)
-        #     println("set  = ", JuMP.constraint_object(c).set)
-        # end
         objv = objective_value(model)
         if SDP_status != MOI.OPTIMAL
             println("termination status: $SDP_status")
@@ -1992,114 +1448,8 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
             println("solution status: $status")
         end
         println("optimum = $objv")
-        # println(blocksize[1])
-        # rmeasure = [-dual(c) for c in rcon]
-        # imeasure = nothing
-        # jmeasure = nothing
-        # kmeasure = nothing
-        # if ipart == true
-        #     imeasure = [-dual(c) for c in icon]
-        #     jmeasure = [-dual(c) for c in jcon]
-        #     kmeasure = [-dual(c) for c in kcon]
-        # end
-        if solution == true
-            rmeasure = [-dual(c) for c in rcon]
-            imeasure = nothing
-            jmeasure = nothing
-            kmeasure = nothing
-            if ipart == true
-                imeasure = [-dual(c) for c in icon]
-                jmeasure = [-dual(c) for c in jcon]
-                kmeasure = [-dual(c) for c in kcon]
-            end
-            moment = get_qmoment(n,rmeasure, imeasure, jmeasure, kmeasure, tsupp, cql, blocks, cl, blocksize, basis;ipart=ipart,nb = nb)
-            # A = qmat_to_realmat(moment[1][1])
-            # evals, evecs = eigen(Symmetric(A))
-            # idx_max = argmax(evals)
-            # v = evecs[:, idx_max]
-
-            # sol = extract_first_order_quaternion_solution(v, tsupp, n)
-
-            # # 打印结果
-            # println("提取的一阶 quaternion 变量解:")
-            # for (i,q) in enumerate(sol)
-            #     println("q[$i] = $q, 模长 = ", norm(q))
-            # end
-            # sol = extract_quaternion_solution(moment)
-            # linear_monos = find_all_linear_monomials(tsupp)
-            # sol = Quaternion{Float64}[]
-            # for i in 1:n
-            #     idx = bfind(tsupp, ltsupp, [UInt16[], UInt16[], [UInt16(i)]])
-            #     println("i=$i, idx=$idx")
-            #     println("  r = ", rmeasure[idx])
-            #     println("  i = ", imeasure[idx])
-            #     println("  j = ", jmeasure[idx])
-            #     println("  k = ", kmeasure[idx])
-            # end
-            # for i in 1:n
-            #     if haskey(linear_monos, i)
-            #         idx = linear_monos[i]
-            #         a = rmeasure[idx]
-            #         b = imeasure !== nothing ? -imeasure[idx] : 0.0
-            #         c = jmeasure !== nothing ? -jmeasure[idx] : 0.0
-            #         d = kmeasure !== nothing ? -kmeasure[idx] : 0.0
-            #         push!(sol, normalize(Quaternion(a, b, c, d)))
-            #     else
-            #         println("Warning: no linear moment for q_$i")
-            #     end
-            # end
-            # println(tsupp)
-            # one_order_monomials = [[UInt16[], UInt16[], UInt16[i]] for i in 1:n]
-            # for (i, mono) in enumerate(one_order_monomials)
-            #     idx = findfirst(m -> m == mono, tsupp)
-            #     if idx !== nothing
-            #         println("mono $mono found at index $idx, value = ", rmeasure[idx])
-            #     else
-            #         println("mono $mono NOT found in tsupp")
-            #     end
-            # end
-            # for i in 1:n
-            #     println("q[$i] in tsupp? ", any(m -> m == q[i], tsupp))
-            #     println("conj(q[$i]) in tsupp? ", any(m -> m == q[i+n], tsupp))
-            # end
-            # if TS != false || CS != false
-            #     sol = extract_solution_from_sparse_moment(moment, cliques, n)
-            # else
-            sol = Quaternion{Float64}[]
-            for i = 1:n
-                a = rmeasure[bfind(tsupp, ltsupp, [UInt16[], UInt16[], UInt16[i]])]
-                b = ipart ? -imeasure[bfind(tsupp, ltsupp, [UInt16[], UInt16[], UInt16[i]])] : 0.0
-                c = ipart ? -jmeasure[bfind(tsupp, ltsupp, [UInt16[], UInt16[], UInt16[i]])] : 0.0
-                d = ipart ? -kmeasure[bfind(tsupp, ltsupp, [UInt16[], UInt16[], UInt16[i]])] : 0.0
-                push!(sol, Quaternion(a, b, c, d))
-            end
-        end
     end
-    if solution
-        return objv,ksupp,SDP_status,sol,moment
-    else
-        return objv,ksupp,SDP_status
-    end
-    # return objv,ksupp,SDP_status,sol,moment
-end
-
-function find_all_linear_monomials(tsupp)
-    linear_monomials = Dict{Int, Int}()  # 变量索引 => tsupp 索引
-    # 遍历所有单项式
-    for idx in 1:length(tsupp)
-        bi = tsupp[idx]
-        total_degree = sum(length(b) for b in bi)
-        if total_degree == 1
-            # 找出是哪一个变量，假设只在其中一个部分有1个元素
-            for part in bi
-                if length(part) == 1
-                    var_idx = Int(part[1])
-                    linear_monomials[var_idx] = idx
-                end
-            end
-        end
-    end
-    return linear_monomials
+    return objv,ksupp,SDP_status
 end
 
 function add_clique!(G, nodes)
@@ -2428,170 +1778,4 @@ function get_gsupp(rlorder, basis, ebasis, supp, cql, I, J, ncc, blocks, eblocks
         push!(gsupp, bi)
     end
     return gsupp
-end
-
-function get_qmoment(n,rmeasure, imeasure, jmeasure, kmeasure, tsupp, cql, blocks, cl, blocksize, basis; ipart = true, nb=0)
-    ctype = ipart == true ? QuaternionF64 : Float64
-    moment = Vector{Vector{Matrix{ctype}}}(undef, cql)
-    for i = 1:cql
-        moment[i] = Vector{Matrix{Quaternion{Float64}}}(undef, cl[i][1])
-        for l = 1:cl[i][1]
-            bs = blocksize[i][1][l]
-            rtemp = zeros(Float64, bs, bs)
-            if ipart == true
-                itemp = zeros(Float64, bs, bs)
-                jtemp = zeros(Float64, bs, bs)
-                ktemp = zeros(Float64, bs, bs)
-            end
-            for t = 1:bs, r = 1:bs
-                a = deepcopy(basis[i][1][blocks[i][1][l][t]])
-                b = deepcopy(basis[i][1][blocks[i][1][l][r]])
-                bi = qtermadd(a, b, n)
-
-                if nb > 0
-                    bi = qreduce_unitnorm(bi, n,nb=nb)
-                end
-
-                Locb = bfind(tsupp, length(tsupp), bi)
-                rtemp[t,r] = rmeasure[Locb]
-                if ipart == true
-                    itemp[t,r] = imeasure[Locb]
-                    jtemp[t,r] = jmeasure[Locb]
-                    ktemp[t,r] = kmeasure[Locb]
-                end
-            end
-
-            rtemp = (rtemp + rtemp') / 2
-            if ipart == true
-                itemp = (itemp - itemp') / 2
-                jtemp = (jtemp - jtemp') / 2
-                ktemp = (ktemp - ktemp') / 2
-            end
-
-            qmat = Matrix{ctype}(undef, bs, bs)
-            for t = 1:bs, r = 1:bs
-                if ipart == true
-                    qmat[t, r] = Quaternion(rtemp[t,r], itemp[t,r], jtemp[t,r], ktemp[t,r])
-                else
-                    qmat[t, r] = rtemp[t,r]
-                end
-            end
-            moment[i][l] = qmat
-        end
-    end
-    return moment
-end
-
-function qmat_to_realmat(Q::Matrix{QuaternionF64})
-    n = size(Q, 1)
-    A = zeros(Float64, 4n, 4n)
-
-    for r = 1:n, c = 1:n
-        q = Q[r,c]
-        a, b, c_, d = real(q), imag_part(q)[1], imag_part(q)[2], imag_part(q)[3]
-        base = 4*(r-1)+1
-        colbase = 4*(c-1)+1
-
-        A[base,     colbase]     = a
-        A[base,     colbase+1]   = -b
-        A[base,     colbase+2]   = -c_
-        A[base,     colbase+3]   = -d
-
-        A[base+1,   colbase]     = b
-        A[base+1,   colbase+1]   = a
-        A[base+1,   colbase+2]   = -d
-        A[base+1,   colbase+3]   = c_
-
-        A[base+2,   colbase]     = c_
-        A[base+2,   colbase+1]   = d
-        A[base+2,   colbase+2]   = a
-        A[base+2,   colbase+3]   = -b
-
-        A[base+3,   colbase]     = d
-        A[base+3,   colbase+1]   = -c_
-        A[base+3,   colbase+2]   = b
-        A[base+3,   colbase+3]   = a
-    end
-
-    return A
-end
-
-function extract_first_order_quaternion_solution(v::AbstractVector{Float64}, tsupp::Vector, qcount::Int)
-    qsol = QuaternionF64[]
-
-    # 找出 tsupp 中一阶单变量的索引：形如 [[], [], [i]]，且 i 只有一个元素
-    one_order_indices = []
-    for (idx, mono) in enumerate(tsupp)
-        # 这里根据你tsupp格式，判断是否为一阶单变量
-        if length(mono) == 3 && length(mono[3]) == 1 && isempty(mono[1]) && isempty(mono[2])
-            push!(one_order_indices, idx)
-        end
-    end
-
-    # 检查数量是否匹配
-    if length(one_order_indices) < qcount
-        error("找到的一阶单变量数量 $(length(one_order_indices)) 小于 qcount = $qcount,请确认 tsupp 格式和 qcount")
-    elseif length(one_order_indices) > qcount
-        @warn "找到的一阶单变量数量 $(length(one_order_indices)) 多于 qcount = $qcount,只提取前 $qcount 个变量"
-        one_order_indices = one_order_indices[1:qcount]
-    end
-
-    # 按 tsupp 中顺序依次提取对应的 quaternion
-    for idx in one_order_indices
-        base = 4*(idx - 1) + 1
-        q = QuaternionF64(v[base], v[base+1], v[base+2], v[base+3])
-        push!(qsol, q)
-    end
-
-    return qsol
-end
-
-function extract_clique_quaternions(v::Vector{Float64}, clique_vars::Vector{UInt16})
-    qsol = QuaternionF64[]
-    for (idx, var_idx) in enumerate(clique_vars)
-        base = 4*(idx - 1) + 1
-        q = QuaternionF64(v[base], v[base+1], v[base+2], v[base+3])
-        push!(qsol, q)
-    end
-    return qsol
-end
-
-function extract_solution_from_sparse_moment(moment::Vector{Vector{Matrix{QuaternionF64}}}, cliques::Vector{Vector{UInt16}}, n::Int)
-    # cliques 是一个列表，每个元素是该 clique 涉及的变量索引向量
-    var_candidates = Dict{Int, Vector{QuaternionF64}}()
-    for var in 1:n
-        var_candidates[var] = QuaternionF64[]
-    end
-
-    # 遍历所有 clique
-    for (block_idx, clique_vars) in enumerate(cliques)
-        Q = moment[1][block_idx]  # 取第一个 cql 下、第 block_idx 个子矩阵
-        A = qmat_to_realmat(Q)
-        evals, evecs = eigen(Symmetric(A))
-        v = evecs[:, argmax(evals)]
-        # 提取该 clique 中的解
-        qsol_local = extract_clique_quaternions(v, clique_vars)
-        for (var_idx, q) in zip(clique_vars, qsol_local)
-            push!(var_candidates[var_idx], q)
-        end
-    end
-
-    # 融合每个变量的候选解
-    qsol_global = Vector{QuaternionF64}(undef, n)
-    for var in 1:n
-        qs = var_candidates[var]
-        if isempty(qs)
-            # 若某变量在所有 clique 中均未出现（不常见），可设为默认单位四元数
-            qsol_global[var] = QuaternionF64(1.0, 0.0, 0.0, 0.0)
-        else
-            s_avg = mean(q.s for q in qs)
-            v1_avg = mean(q.v1 for q in qs)
-            v2_avg = mean(q.v2 for q in qs)
-            v3_avg = mean(q.v3 for q in qs)
-            q_avg = QuaternionF64(s_avg, v1_avg, v2_avg, v3_avg)
-            qsol_global[var] = q_avg / norm(q_avg)
-        end
-    end
-
-    return qsol_global
 end
