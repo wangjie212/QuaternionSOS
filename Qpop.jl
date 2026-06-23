@@ -2,7 +2,7 @@ const Poly = DP.Polynomial{DP.Commutative{DP.CreationOrder}, Graded{LexOrder}, F
 const NCPoly = DP.Polynomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}, Float64}
 const NCMono = DP.Monomial{DP.NonCommutative{DP.CreationOrder}, Graded{LexOrder}}
 
-function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnumeq=0, qncnumeq=0, RemSig=false, nb=0,CS="MF",cliques=[],TS="block",
+function qtssos(pop, z, n::Int, d; fsupp=nothing, fcoe=nothing, numeq=0, rncnumeq=0, qncnumeq=0, RemSig=false, nb=0, CS="MF",cliques=[],TS="block",
     merge=false, md=3, solver="Mosek", QUIET=false, solve=true, solution=false, ipart=true,
     mosek_setting=mosek_para(), normality=0, conjubasis=true,addrcons=true,addicons=false)
     if addrcons
@@ -578,11 +578,20 @@ function qsolvesdp(n, m, rncnumeq, qncnumeq, rlorder, supp::Vector{Vector{Vector
         ## equality constraints
 
         epos = Vector{Vector{Any}}(undef, cql)
-        addepos = Vector{Vector{Any}}(undef, cql)
+        if addicons
+            addepos = Vector{Vector{Any}}(undef, cql)
+        end
         for i = 1:cql
             if !isempty(J[i])
                 epos[i] = Vector{Any}(undef, length(J[i]))
-                addepos[i] = Vector{Any}(undef, 3*length(J[i]))
+                # println(cliques[i])
+                if addicons
+                    if cql > 1
+                        addepos[i] = Vector{Any}(undef, 3*n*(n-1))
+                    else
+                        addepos[i] = Vector{Any}(undef, 3*length(J[i]))
+                    end
+                end
                 for (j, k) in enumerate(J[i])
                     if J[i][j] <= m - rncnumeq - qncnumeq
                         bs = length(eblocks[i][j])

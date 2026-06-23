@@ -35,7 +35,7 @@ end
 ## ball
 
 #QSOS: basis[q]_1
-@time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, addicons = false,solution = false, QUIET=false)
+@time opt = qtssos([f, g], q, n, 1, fsupp=Fsupp, fcoe=Fcoe, TS=false, CS=false,ipart=false,conjubasis=false, addrcons = false,solution = false, QUIET=false)
 #RSOS: d=1
 pop,x = quaternion_to_real([f, g], q)
 opt,sol,data = tssos(pop, x, 1, TS=false, solve=false, QUIET=true)
@@ -52,7 +52,7 @@ println(ub)
 
 ### set: f = [q]_1^*Q[q]_1, Q:quaternion, n=10,20,30,40
 Random.seed!(1)
-n = 40
+n = 10
 @ncpolyvar q[1:2n]
 f,fr,Fsupp,Fcoe = qrandomsymfunc(q, n, 1, conjugates=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -78,7 +78,7 @@ println(ub)
 ###set: f = [q,\bar(q)]_1^*Q[q,\bar(q)]_1, Q:real, n=20,40,60
 
 Random.seed!(3)
-n = 60
+n = 20
 @ncpolyvar q[1:2n]
 f,Fsupp,Fcoe = randomsymfunc(q, n, 1, conjugates=true, coelimit=false)
 g = 1 - sum(q[i]*q[i+n] for i = 1:n)
@@ -217,8 +217,8 @@ pop,x = quaternion_to_real([f; gs;], q)
 ###[n,cn,size] = [60,20,4], [90,30,4], [120,40,4]
 
 Random.seed!(3)
-n= 20
-cn = 7 #number of cliques
+n= 10
+cn = 3 #number of cliques
 size = 4 #cliquesize
 @ncpolyvar q[1:2n]
 f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coelimit=false)
@@ -231,7 +231,7 @@ f,gs,Fsupp,Fcoe  = cliques_randomsymfunc(q, n, cn,size,2,conjugates=false, coeli
 @time qtssos([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, normality = 1, conjubasis=false, QUIET=false)
 
 # full basis
-@time qtssos([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, conjubasis=true, QUIET=false)
+@time qtssos([f;gs], q, n, 2, fsupp=Fsupp, fcoe=Fcoe, numeq=cn, CS="MF",TS=false,ipart=false, conjubasis=true , QUIET=false)
 # RSOS :d=2
 pop,x = quaternion_to_real([f;gs], q)
 @time opt,sol,data = tssos(pop, x, 2, numeq=cn, TS=false, CS="MF",solve=true, solution=true,QUIET=false)
